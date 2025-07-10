@@ -1,3 +1,4 @@
+# Moodly-2.0
 # 🌟 Moodly - Emotional Journaling App for Tweens
 
 A Flask-based web application that helps tweens (ages 10-14) develop emotional intelligence through guided journaling, mood tracking, and AI-powered prompts.
