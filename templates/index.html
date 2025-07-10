@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Moodly - How are you feeling today?{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="container-main">
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-rainbow"></i> How are you feeling today?
+            </h1>
+            <p class="lead">Choose the emoji that best matches your mood, and let's explore your feelings together!</p>
+        </div>
+
+        <div class="row">
+            {% for mood_key, mood_info in moods.items() %}
+            <div class="col-lg-3 col-md-4 col-sm-6 col-6">
+                <div class="mood-card text-center" 
+                     onclick="selectMood('{{ mood_key }}')"
+                     style="border-color: {{ mood_info.color }};">
+                    <div class="mood-emoji">{{ mood_info.emoji }}</div>
+                    <h5 class="mb-0">{{ mood_info.name }}</h5>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-5">
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-lightbulb"></i>
+                <strong>Pro tip:</strong> There's no wrong feeling! Every emotion is valid and helps us learn about ourselves.
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectMood(moodKey) {
+    // Add a fun animation before redirecting
+    const cards = document.querySelectorAll('.mood-card');
+    cards.forEach(card => {
+        card.style.opacity = '0.5';
+        card.style.transform = 'scale(0.95)';
+    });
+    
+    // Highlight selected mood
+    event.target.closest('.mood-card').style.opacity = '1';
+    event.target.closest('.mood-card').style.transform = 'scale(1.1)';
+    
+    // Redirect after a short delay for visual feedback
+    setTimeout(() => {
+        window.location.href = `/mood/${moodKey}`;
+    }, 500);
+}
+
+// Add hover effects
+document.addEventListener('DOMContentLoaded', function() {
+    const moodCards = document.querySelectorAll('.mood-card');
+    
+    moodCards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            const color = this.style.borderColor;
+            this.style.background = `linear-gradient(135deg, ${color}20, ${color}10)`;
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.background = 'white';
+        });
+    });
+});
+</script>
+{% endblock %}

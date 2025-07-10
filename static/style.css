@@ -1,0 +1,167 @@
+/* Additional custom styles for Moodly */
+
+.mood-card-animation {
+    animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #5a6fd8, #6a4190);
+}
+
+/* Responsive text sizes */
+@media (max-width: 576px) {
+    .display-4 {
+        font-size: 2rem;
+    }
+    
+    .mood-emoji {
+        font-size: 2rem !important;
+    }
+    
+    .container-main {
+        padding: 1rem;
+    }
+}
+
+/* Music player styles */
+.song-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.song-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.album-cover, .album-placeholder {
+    transition: all 0.3s ease;
+}
+
+.song-card:hover .album-cover,
+.song-card:hover .album-placeholder {
+    transform: scale(1.05);
+}
+
+.song-title {
+    font-weight: 600;
+    color: #343a40;
+}
+
+.song-controls .btn {
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.play-btn:hover {
+    transform: scale(1.05);
+}
+
+.music-section {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-radius: 20px;
+    padding: 2rem;
+    margin: 2rem 0;
+}
+
+.music-loading {
+    animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes musicFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.song-card {
+    animation: musicFadeIn 0.6s ease-out;
+}
+
+/* Audio player customization */
+#previewPlayer {
+    width: 100%;
+    max-width: 300px;
+    margin: 1rem auto;
+    border-radius: 10px;
+}
+
+/* Mobile responsiveness for music cards */
+@media (max-width: 768px) {
+    .song-card .card-body {
+        padding: 1rem 0.5rem;
+    }
+    
+    .album-cover, .album-placeholder {
+        width: 60px !important;
+        height: 60px !important;
+    }
+    
+    .song-controls .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .song-title {
+        font-size: 0.9rem;
+    }
+}
+
+/* Spotify branding colors */
+.btn-success {
+    background-color: #1db954 !important;
+    border-color: #1db954 !important;
+}
+
+.btn-success:hover {
+    background-color: #1ed760 !important;
+    border-color: #1ed760 !important;
+    transform: translateY(-1px);
+}

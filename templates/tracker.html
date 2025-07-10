@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Moodly - My Emotional Journey{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="container-main">
+        <div class="text-center mb-5">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-chart-line"></i> My Emotional Journey
+            </h1>
+            <p class="lead">Look how far you've come! Every entry shows your growth and self-awareness.</p>
+        </div>
+
+        {% if mood_data %}
+            <!-- Mood Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card text-center" style="border-radius: 15px; border: none; background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
+                        <div class="card-body">
+                            <i class="fas fa-pen-alt fa-2x mb-2"></i>
+                            <h3>{{ mood_data|length }}</h3>
+                            <p class="mb-0">Journal Entries</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center" style="border-radius: 15px; border: none; background: linear-gradient(135deg, #ffecd2, #fcb69f); color: #8b4513;">
+                        <div class="card-body">
+                            <i class="fas fa-calendar-day fa-2x mb-2"></i>
+                            <h3>{{ (mood_data|map(attribute='date')|list|unique|list)|length }}</h3>
+                            <p class="mb-0">Days Active</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center" style="border-radius: 15px; border: none; background: linear-gradient(135deg, #a8edea, #fed6e3);">
+                        <div class="card-body">
+                            <i class="fas fa-smile fa-2x mb-2"></i>
+                            <h3>{{ mood_data[-1].mood_info.emoji if mood_data else '😊' }}</h3>
+                            <p class="mb-0">Latest Mood</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mood Timeline -->
+            <div class="timeline-container">
+                <h3 class="mb-4"><i class="fas fa-timeline"></i> Your Mood Timeline</h3>
+                
+                {% for entry in mood_data|reverse %}
+                <div class="timeline-item" style="border-left-color: {{ moods[entry.mood].color }};">
+                    <div class="row align-items-center">
+                        <div class="col-md-2 text-center">
+                            <div style="font-size: 2rem;">{{ entry.mood_info.emoji }}</div>
+                            <small class="text-muted">{{ entry.date }}</small>
+                        </div>
+                        <div class="col-md-3">
+                            <h6 class="mb-1" style="color: {{ moods[entry.mood].color }};">
+                                {{ entry.mood_info.name }}
+                            </h6>
+                            <small class="text-muted">Feeling {{ entry.mood_info.name.lower() }}</small>
+                        </div>
+                        <div class="col-md-7">
+                            <p class="mb-0">{{ entry.entry_preview }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Mood Distribution Chart -->
+            <div class="mt-5">
+                <h3 class="mb-4"><i class="fas fa-chart-pie"></i> Your Mood Patterns</h3>
+                <div class="row">
+                    {% set mood_counts = {} %}
+                    {% for entry in mood_data %}
+                        {% if mood_counts.update({entry.mood: mood_counts.get(entry.mood, 0) + 1}) %}{% endif %}
+                    {% endfor %}
+                    
+                    {% for mood_key, count in mood_counts.items() %}
+                    <div class="col-md-3 col-sm-6 mb-3">
+                        <div class="card text-center" style="border-radius: 15px; border: 2px solid {{ moods[mood_key].color }};">
+                            <div class="card-body">
+                                <div style="font-size: 2rem;">{{ moods[mood_key].emoji }}</div>
+                                <h6>{{ moods[mood_key].name }}</h6>
+                                <h4 style="color: {{ moods[mood_key].color }};">{{ count }}</h4>
+                                <small class="text-muted">time{{ 's' if count != 1 else '' }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Encouragement Section -->
+            <div class="motivational-message mt-5">
+                <i class="fas fa-trophy"></i>
+                <strong>Amazing work!</strong> You've been taking such good care of your emotional health. 
+                Keep reflecting, keep growing, and remember - every feeling you experience is helping you learn more about yourself! 🌟
+            </div>
+
+        {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <i class="fas fa-journal-whills fa-5x text-muted mb-4"></i>
+                <h3>Your journey starts here!</h3>
+                <p class="lead text-muted mb-4">
+                    You haven't written any journal entries yet, but that's okay!<br>
+                    Every journey begins with a single step.
+                </p>
+                <a href="{{ url_for('home') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> Start My First Entry
+                </a>
+            </div>
+        {% endif %}
+
+        <!-- Navigation -->
+        <div class="text-center mt-5">
+            <a href="{{ url_for('home') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-plus"></i> New Entry
+            </a>
+            <button onclick="window.print()" class="btn btn-outline-secondary">
+                <i class="fas fa-print"></i> Print Journey
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+@media print {
+    .navbar, .btn, .footer {
+        display: none !important;
+    }
+    
+    .container-main {
+        box-shadow: none !important;
+        background: white !important;
+    }
+    
+    body {
+        background: white !important;
+    }
+}
+
+.timeline-container {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+    margin-left: 20px;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -23px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid;
+    border-color: inherit;
+}
+
+@media (max-width: 768px) {
+    .timeline-item {
+        margin-left: 10px;
+    }
+    
+    .timeline-item::before {
+        left: -13px;
+        width: 8px;
+        height: 8px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add some interactive elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate timeline items on scroll
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateX(0)';
+            }
+        });
+    });
+    
+    timelineItems.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(-20px)';
+        item.style.transition = `all 0.5s ease ${index * 0.1}s`;
+        observer.observe(item);
+    });
+});
+</script>
+{% endblock %}

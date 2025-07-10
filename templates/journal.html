@@ -1,0 +1,383 @@
+{% extends "base.html" %}
+
+{% block title %}Moodly - Journal Time{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="container-main">
+        <!-- Mood Header -->
+        <div class="text-center mb-4">
+            <div style="background: {{ mood.color }}20; border-radius: 15px; padding: 2rem; margin-bottom: 2rem;">
+                <h1 class="display-3">{{ mood.emoji }}</h1>
+                <h2>You're feeling <span style="color: {{ mood.color }};">{{ mood.name }}</span></h2>
+                <p class="lead">That's totally okay! Let's explore this feeling together.</p>
+            </div>
+        </div>
+
+        <!-- AI Prompt -->
+        <div class="alert alert-light border-0" style="background: linear-gradient(135deg, #ffecd2, #fcb69f); border-radius: 15px;">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    <i class="fas fa-robot fa-3x" style="color: #8b4513;"></i>
+                </div>
+                <div class="col-md-10">
+                    <h5 style="color: #8b4513; margin-bottom: 0.5rem;">
+                        <i class="fas fa-sparkles"></i> Your Journaling Prompt
+                    </h5>
+                    <p style="color: #8b4513; font-size: 1.1rem; margin: 0;">{{ prompt }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Entry Form -->
+        <form id="journalForm" class="mt-4">
+            <div class="journal-area">
+                <label for="journalEntry" class="form-label">
+                    <i class="fas fa-pen-nib"></i> Write your thoughts here:
+                </label>
+                <textarea 
+                    id="journalEntry" 
+                    class="form-control border-0" 
+                    rows="8" 
+                    placeholder="Take your time... there's no rush. Write whatever comes to your heart ✨"
+                    style="background: transparent; resize: vertical; font-size: 1.1rem; line-height: 1.6;"
+                ></textarea>
+                
+                <div class="mt-3 text-muted">
+                    <small>
+                        <i class="fas fa-lock"></i> Your thoughts are private and safe with you.
+                        <span id="wordCount" class="ms-3">0 words</span>
+                    </small>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-heart"></i> Save My Thoughts
+                </button>
+                <br>
+                <small class="text-muted mt-2 d-block">You're doing great by taking time to reflect! 🌟</small>
+            </div>
+        </form>
+
+        <!-- Success Message (initially hidden) -->
+        <div id="successMessage" class="motivational-message" style="display: none;">
+            <i class="fas fa-star"></i>
+            <span id="motivationalText"></span>
+        </div>
+
+        <!-- Music Recommendations Section -->
+        <div class="mt-5">
+            <div class="card" style="border-radius: 20px; border: none; background: linear-gradient(135deg, #e3f2fd, #bbdefb);">
+                <div class="card-body">
+                    <h4 class="text-center mb-4">
+                        <i class="fas fa-music"></i> Music for Your {{ mood.name }} Mood
+                    </h4>
+                    <p class="text-center text-muted mb-4">
+                        Sometimes music can help us process our feelings. Here are some songs that might resonate with you right now! 🎵
+                    </p>
+                    
+                    <div id="musicContainer">
+                        {% if songs %}
+                        <div class="row">
+                            {% for song in songs %}
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="song-card card h-100" style="border-radius: 15px; border: 2px solid {{ mood.color }}20;">
+                                    <div class="card-body text-center">
+                                        {% if song.image_url %}
+                                        <img src="{{ song.image_url }}" alt="Album Cover" class="album-cover mb-2" style="width: 80px; height: 80px; border-radius: 10px; object-fit: cover;">
+                                        {% else %}
+                                        <div class="album-placeholder mb-2" style="width: 80px; height: 80px; background: {{ mood.color }}30; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                            <i class="fas fa-music fa-2x" style="color: {{ mood.color }};"></i>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        <h6 class="song-title mb-1">{{ song.name }}</h6>
+                                        <small class="text-muted d-block mb-2">{{ song.artist }}</small>
+                                        
+                                        <div class="song-controls">
+                                            {% if song.preview_url %}
+                                            <button class="btn btn-sm btn-outline-primary play-btn me-2" 
+                                                    data-preview="{{ song.preview_url }}" 
+                                                    data-song="{{ song.name }}"
+                                                    style="border-color: {{ mood.color }}; color: {{ mood.color }};">
+                                                <i class="fas fa-play"></i> Preview
+                                            </button>
+                                            {% endif %}
+                                            
+                                            {% if song.spotify_url != '#' %}
+                                            <a href="{{ song.spotify_url }}" target="_blank" class="btn btn-sm btn-success">
+                                                <i class="fab fa-spotify"></i> Listen
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center">
+                            <i class="fas fa-music fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">Music recommendations are loading... 🎵</p>
+                            <button id="loadMusicBtn" class="btn btn-outline-primary" onclick="loadMusic('{{ mood_key }}')">
+                                <i class="fas fa-refresh"></i> Load Music Suggestions
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Audio player for previews -->
+                    <audio id="previewPlayer" style="display: none;" controls></audio>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="text-center mt-4">
+            <a href="{{ url_for('home') }}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-arrow-left"></i> Choose Different Mood
+            </a>
+            <a href="{{ url_for('mood_tracker') }}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-line"></i> View My Journey
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Word counter
+const journalEntry = document.getElementById('journalEntry');
+const wordCount = document.getElementById('wordCount');
+
+journalEntry.addEventListener('input', function() {
+    const words = this.value.trim().split(/\s+/).filter(word => word.length > 0);
+    const count = this.value.trim() === '' ? 0 : words.length;
+    wordCount.textContent = `${count} word${count !== 1 ? 's' : ''}`;
+});
+
+// Form submission
+document.getElementById('journalForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const entry = journalEntry.value.trim();
+    if (entry.length < 10) {
+        alert('Please write at least a few words about how you\'re feeling. Every thought matters! 💭');
+        return;
+    }
+    
+    // Show loading state
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    submitBtn.disabled = true;
+    
+    // Submit the entry
+    fetch('/submit_entry', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            mood: '{{ mood_key }}',
+            entry: entry
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            document.getElementById('motivationalText').textContent = data.message;
+            document.getElementById('successMessage').style.display = 'block';
+            
+            // Scroll to success message
+            document.getElementById('successMessage').scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+            
+            // Clear the form
+            journalEntry.value = '';
+            wordCount.textContent = '0 words';
+            
+            // Reset button after a delay
+            setTimeout(() => {
+                submitBtn.innerHTML = '<i class="fas fa-plus"></i> Write Another Entry';
+                submitBtn.disabled = false;
+            }, 2000);
+        } else {
+            alert(data.error || 'Something went wrong. Please try again!');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again!');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    });
+});
+
+// Auto-resize textarea
+journalEntry.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+
+// Encouragement on focus
+journalEntry.addEventListener('focus', function() {
+    const encouragements = [
+        "Take your time... 🌸",
+        "Every feeling is valid 💝",
+        "You're being so brave 🦋",
+        "Your thoughts matter 🌟",
+        "Just be yourself 🌈"
+    ];
+    const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+    this.placeholder = `${randomEncouragement} What's in your heart today?`;
+});
+
+// Music player functionality
+let currentAudio = null;
+
+function loadMusic(mood) {
+    const loadBtn = document.getElementById('loadMusicBtn');
+    const musicContainer = document.getElementById('musicContainer');
+    
+    loadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    loadBtn.disabled = true;
+    
+    fetch(`/api/music/${mood}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.songs && data.songs.length > 0) {
+                displaySongs(data.songs, data.mood_info);
+            } else {
+                musicContainer.innerHTML = '<p class="text-center text-muted">No music recommendations available right now. 🎵</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading music:', error);
+            musicContainer.innerHTML = '<p class="text-center text-muted">Unable to load music recommendations. 🎵</p>';
+        });
+}
+
+function displaySongs(songs, moodInfo) {
+    const musicContainer = document.getElementById('musicContainer');
+    
+    let songsHTML = '<div class="row">';
+    
+    songs.forEach(song => {
+        songsHTML += `
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="song-card card h-100" style="border-radius: 15px; border: 2px solid ${moodInfo.color}20;">
+                    <div class="card-body text-center">
+                        ${song.image_url ? 
+                            `<img src="${song.image_url}" alt="Album Cover" class="album-cover mb-2" style="width: 80px; height: 80px; border-radius: 10px; object-fit: cover;">` :
+                            `<div class="album-placeholder mb-2" style="width: 80px; height: 80px; background: ${moodInfo.color}30; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                <i class="fas fa-music fa-2x" style="color: ${moodInfo.color};"></i>
+                            </div>`
+                        }
+                        
+                        <h6 class="song-title mb-1">${song.name}</h6>
+                        <small class="text-muted d-block mb-2">${song.artist}</small>
+                        
+                        <div class="song-controls">
+                            ${song.preview_url ? 
+                                `<button class="btn btn-sm btn-outline-primary play-btn me-2" 
+                                        onclick="playPreview('${song.preview_url}', '${song.name}', this)"
+                                        style="border-color: ${moodInfo.color}; color: ${moodInfo.color};">
+                                    <i class="fas fa-play"></i> Preview
+                                </button>` : ''
+                            }
+                            
+                            ${song.spotify_url !== '#' ? 
+                                `<a href="${song.spotify_url}" target="_blank" class="btn btn-sm btn-success">
+                                    <i class="fab fa-spotify"></i> Listen
+                                </a>` : ''
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    songsHTML += '</div>';
+    musicContainer.innerHTML = songsHTML;
+}
+
+function playPreview(previewUrl, songName, button) {
+    const audioPlayer = document.getElementById('previewPlayer');
+    
+    // Stop current audio if playing
+    if (currentAudio && !currentAudio.paused) {
+        currentAudio.pause();
+        // Reset all play buttons
+        document.querySelectorAll('.play-btn').forEach(btn => {
+            btn.innerHTML = '<i class="fas fa-play"></i> Preview';
+            btn.disabled = false;
+        });
+    }
+    
+    // If clicking the same button, just stop
+    if (currentAudio && currentAudio.src === previewUrl && !currentAudio.paused) {
+        return;
+    }
+    
+    // Play new audio
+    audioPlayer.src = previewUrl;
+    currentAudio = audioPlayer;
+    
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+    button.disabled = true;
+    
+    audioPlayer.onloadstart = () => {
+        button.innerHTML = '<i class="fas fa-pause"></i> Playing...';
+    };
+    
+    audioPlayer.onended = () => {
+        button.innerHTML = '<i class="fas fa-play"></i> Preview';
+        button.disabled = false;
+    };
+    
+    audioPlayer.onerror = () => {
+        button.innerHTML = '<i class="fas fa-exclamation"></i> Error';
+        setTimeout(() => {
+            button.innerHTML = '<i class="fas fa-play"></i> Preview';
+            button.disabled = false;
+        }, 2000);
+    };
+    
+    audioPlayer.oncanplay = () => {
+        audioPlayer.play();
+        button.innerHTML = '<i class="fas fa-pause"></i> Playing...';
+        button.disabled = false;
+        
+        // Stop audio after 30 seconds (standard preview length)
+        setTimeout(() => {
+            if (!audioPlayer.paused) {
+                audioPlayer.pause();
+                button.innerHTML = '<i class="fas fa-play"></i> Preview';
+            }
+        }, 30000);
+    };
+}
+
+// Initialize music player controls
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for existing play buttons
+    document.querySelectorAll('.play-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const previewUrl = this.getAttribute('data-preview');
+            const songName = this.getAttribute('data-song');
+            if (previewUrl) {
+                playPreview(previewUrl, songName, this);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
