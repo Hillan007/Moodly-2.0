@@ -379,5 +379,8 @@ def get_music_for_mood(mood_key):
         'mood_info': MOODS[mood_key]
     })
 
+# For Vercel deployment - export the app object
+application = app
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
