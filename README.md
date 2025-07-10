@@ -3,6 +3,10 @@
 
 A Flask-based web application that helps tweens (ages 10-14) develop emotional intelligence through guided journaling, mood tracking, and AI-powered prompts.
 
+## 🚀 **Live Demo**: [https://moodly-2-0.vercel.app/](https://moodly-2-0.vercel.app/)
+
+Try Moodly now without any setup - it's live and ready to use!
+
 ## ✨ Features
 
 - **Mood Selection**: Emoji-based mood picker with 8 different emotions
@@ -16,6 +20,10 @@ A Flask-based web application that helps tweens (ages 10-14) develop emotional i
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## 🚀 Quick Start
+
+**🌐 Use Online**: Visit [https://moodly-2-0.vercel.app/](https://moodly-2-0.vercel.app/) to use Moodly instantly without any setup!
+
+**💻 Run Locally**: Follow the steps below to run Moodly on your own computer:
 
 ### Prerequisites
 - Python 3.8 or higher
@@ -155,7 +163,11 @@ Moodly can be a valuable tool for:
 
 ## 🚀 Deployment
 
-For production deployment:
+### Live Deployment
+Moodly is live and accessible at: **[https://moodly-2-0.vercel.app/](https://moodly-2-0.vercel.app/)**
+
+### Local Development
+For production deployment on your own server:
 
 1. **Set up a production environment**
 2. **Configure environment variables**
