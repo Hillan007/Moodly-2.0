@@ -19,15 +19,16 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
-# Configure OpenAI client (you'll need to set your API key)
-# Temporarily disabled to avoid dependency issues
+# Configure OpenAI client
 openai_client = None
-# try:
-#     if os.environ.get('OPENAI_API_KEY'):
-#         openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
-# except Exception as e:
-#     print(f"OpenAI client initialization error: {e}")
-#     print("App will continue with fallback prompts.")
+try:
+    if os.environ.get('OPENAI_API_KEY'):
+        from openai import OpenAI
+        openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        print("✅ OpenAI client initialized successfully!")
+except Exception as e:
+    print(f"⚠️ OpenAI client initialization error: {e}")
+    print("App will continue with fallback prompts.")
 
 # Data storage (in production, use a proper database)
 JOURNAL_ENTRIES = {}
@@ -240,47 +241,48 @@ def get_user_id():
         session['user_id'] = str(uuid.uuid4())
     return session['user_id']
 
-def get_ai_prompt(mood, user_age=12):
-    """Generate an AI journaling prompt based on mood"""
-    if not openai_client:
-        # Fallback prompts if OpenAI is not configured
-        fallback_prompts = {
-            'happy': "What made you smile today? Describe a moment that brought you joy!",
-            'sad': "It's okay to feel sad sometimes. What would help you feel a little better?",
-            'excited': "Your excitement is contagious! What are you looking forward to?",
-            'anxious': "Take a deep breath. What's one small thing you can do to feel calmer?",
-            'calm': "You seem peaceful today. What helps you stay centered?",
-            'angry': "Strong feelings are normal. What triggered this feeling?",
-            'confused': "When we're confused, writing can help clarify our thoughts. What's on your mind?",
-            'grateful': "Gratitude is a superpower! What are three things you're thankful for today?"
-        }
-        return fallback_prompts.get(mood, "How are you feeling today? Write about what's in your heart.")
+def get_ai_prompt(mood_key, mood_info):
+    """Generate AI-powered journaling prompt based on mood."""
+    if openai_client:
+        try:
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": f"You are a supportive, encouraging assistant helping tweens (ages 10-14) with emotional journaling. Be warm, age-appropriate, and understanding. Keep responses to 1-2 sentences."
+                    },
+                    {
+                        "role": "user", 
+                        "content": f"I'm feeling {mood_info['name'].lower()} today. Give me a thoughtful journaling prompt to help me explore this emotion."
+                    }
+                ],
+                max_tokens=100,
+                temperature=0.7
+            )
+            
+            ai_prompt = response.choices[0].message.content.strip()
+            print(f"🤖 Generated AI prompt for {mood_key}: {ai_prompt}")
+            return ai_prompt
+            
+        except Exception as e:
+            print(f"OpenAI API error: {e}")
     
-    try:
-        response = openai_client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": f"You are a supportive journaling assistant for tweens (ages 10-14). Generate age-appropriate, encouraging journaling prompts. Keep language simple, positive, and engaging. The user is feeling {mood}."},
-                {"role": "user", "content": f"Generate a supportive journaling prompt for a {user_age}-year-old who is feeling {mood}. Make it encouraging and age-appropriate."}
-            ],
-            max_tokens=100,
-            temperature=0.7
-        )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"OpenAI API error: {e}")
-        # Return fallback prompt
-        fallback_prompts = {
-            'happy': "What made you smile today? Describe a moment that brought you joy!",
-            'sad': "It's okay to feel sad sometimes. What would help you feel a little better?",
-            'excited': "Your excitement is contagious! What are you looking forward to?",
-            'anxious': "Take a deep breath. What's one small thing you can do to feel calmer?",
-            'calm': "You seem peaceful today. What helps you stay centered?",
-            'angry': "Strong feelings are normal. What triggered this feeling?",
-            'confused': "When we're confused, writing can help clarify our thoughts. What's on your mind?",
-            'grateful': "Gratitude is a superpower! What are three things you're thankful for today?"
-        }
-        return fallback_prompts.get(mood, "How are you feeling today? Write about what's in your heart.")
+    # Fallback prompts if OpenAI fails
+    fallback_prompts = {
+        'happy': "What made you smile today? Describe a moment that brought you joy!",
+        'sad': "It's okay to feel sad sometimes. What would help you feel a little better?",
+        'excited': "Your excitement is contagious! What are you looking forward to?",
+        'anxious': "Take a deep breath. What's one small thing you can do to feel calmer?",
+        'calm': "You seem peaceful today. What's helping you feel so centered?",
+        'angry': "Those feelings are valid. What happened, and how can we work through it?",
+        'confused': "It's normal to feel mixed up sometimes. What's on your mind?",
+        'grateful': "Gratitude is beautiful! What are you most thankful for right now?"
+    }
+    
+    prompt = fallback_prompts.get(mood_key, "How are you feeling today? Tell me what's on your mind.")
+    print(f"📝 Using fallback prompt for {mood_key}")
+    return prompt
 
 def get_motivational_message(mood):
     """Generate a motivational message based on mood"""
@@ -476,7 +478,7 @@ def mood_selected(mood_key):
         return redirect(url_for('index'))
     
     mood_info = MOODS[mood_key]
-    prompt = get_ai_prompt(mood_key)
+    prompt = get_ai_prompt(mood_key, mood_info)
     songs = get_mood_songs(mood_key, limit=5)
     
     return render_template('journal.html', 
