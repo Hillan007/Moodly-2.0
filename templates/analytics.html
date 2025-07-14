@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Mood Analytics - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <h2><i class="fas fa-chart-bar text-primary"></i> Mood Analytics</h2>
+            <p class="lead">Discover patterns in your emotional journey</p>
+        </div>
+    </div>
+
+    {% if analytics.total_entries > 0 %}
+    <div class="row">
+        <!-- Summary Stats -->
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-chart-line"></i> Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h3 class="text-primary">{{ analytics.total_entries }}</h3>
+                        <small class="text-muted">Total Journal Entries</small>
+                    </div>
+                    <div class="text-center mb-3">
+                        <h3 class="text-success">{{ analytics.streak }}</h3>
+                        <small class="text-muted">Current Streak 🔥</small>
+                    </div>
+                    {% if analytics.streak >= 7 %}
+                    <div class="alert alert-success text-center py-2">
+                        <i class="fas fa-trophy"></i> Amazing streak!
+                    </div>
+                    {% elif analytics.streak >= 3 %}
+                    <div class="alert alert-info text-center py-2">
+                        <i class="fas fa-fire"></i> Building momentum!
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Mood Distribution -->
+        <div class="col-lg-8 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-pie-chart"></i> Mood Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% for mood_key, count in analytics.mood_distribution.items() %}
+                    {% if mood_key in moods %}
+                    {% set mood = moods[mood_key] %}
+                    {% set percentage = (count / analytics.total_entries * 100) | round(1) %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>
+                                <span class="fs-4">{{ mood.emoji }}</span>
+                                <strong>{{ mood.name }}</strong>
+                                <small class="text-muted">({{ count }} entries)</small>
+                            </span>
+                            <span class="badge bg-primary">{{ percentage }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar" 
+                                 role="progressbar" 
+                                 style="width: {{ percentage }}%; background-color: {{ mood.color }};"
+                                 aria-valuenow="{{ percentage }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Insights and Patterns -->
+    <div class="row">
+        <!-- Personal Insights -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-lightbulb"></i> Your Insights</h5>
+                </div>
+                <div class="card-body">
+                    {% if analytics.insights %}
+                        {% for insight in analytics.insights %}
+                        <div class="alert alert-light border-left-success py-2">
+                            <i class="fas fa-star text-warning"></i> {{ insight }}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">Keep journaling to discover insights about your mood patterns!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pattern Analysis -->
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow">
+                <div class="card-header bg-warning text-white">
+                    <h5><i class="fas fa-search"></i> Pattern Analysis</h5>
+                </div>
+                <div class="card-body">
+                    {% if patterns.insights %}
+                        {% for pattern in patterns.insights %}
+                        <div class="alert alert-light border-left-warning py-2">
+                            <i class="fas fa-calendar-alt text-info"></i> {{ pattern }}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted">{{ patterns.message if patterns.message else "Continue journaling to see weekly patterns!" }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mood Recommendations -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5><i class="fas fa-heart"></i> Wellness Recommendations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if analytics.mood_distribution %}
+                            {% set most_common_mood = analytics.mood_distribution.items() | list | sort(attribute='1', reverse=True) | first %}
+                            {% if most_common_mood[0] == 'anxious' %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-info">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-lungs fa-2x text-info mb-2"></i>
+                                        <h6>Try Breathing Exercises</h6>
+                                        <a href="{{ url_for('breathing_exercise', mood_key='anxious') }}" class="btn btn-sm btn-info">Start Now</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if most_common_mood[0] in ['sad', 'angry'] %}
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-warning">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-lightbulb fa-2x text-warning mb-2"></i>
+                                        <h6>Coping Strategies</h6>
+                                        <a href="{{ url_for('coping_strategies_page', mood_key=most_common_mood[0]) }}" class="btn btn-sm btn-warning">Get Tips</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                        
+                        <div class="col-md-4 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-pen fa-2x text-success mb-2"></i>
+                                    <h6>Gratitude Practice</h6>
+                                    <a href="{{ url_for('use_template', template_type='gratitude') }}" class="btn btn-sm btn-success">Try Template</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- No Data Yet -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow text-center">
+                <div class="card-body py-5">
+                    <i class="fas fa-chart-bar fa-4x text-muted mb-4"></i>
+                    <h3>No Data Yet</h3>
+                    <p class="lead text-muted">Start journaling to see your mood analytics!</p>
+                    <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-pen"></i> Start Journaling
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('wellness_hub') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-heart"></i> Wellness Hub
+            </a>
+            <a href="{{ url_for('mood_tracker') }}" class="btn btn-outline-success me-2">
+                <i class="fas fa-timeline"></i> Mood Timeline
+            </a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-home"></i> Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.border-left-success {
+    border-left: 4px solid #28a745 !important;
+}
+
+.border-left-warning {
+    border-left: 4px solid #ffc107 !important;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+</style>
+{% endblock %}

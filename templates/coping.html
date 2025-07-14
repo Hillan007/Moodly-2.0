@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block title %}Coping with {{ mood.name }} - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2>{{ mood.emoji }} Coping with {{ mood.name }}</h2>
+                <p class="lead">Practical strategies to help you feel better</p>
+            </div>
+
+            <!-- Breathing Exercise Card -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5><i class="fas fa-lungs"></i> Quick Relief: Breathing Exercise</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6>{{ exercise.name }}</h6>
+                            <p class="mb-2">{{ exercise.description }}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-clock"></i> Duration: {{ exercise.duration }}
+                            </small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <a href="{{ url_for('breathing_exercise', mood_key=mood_key) }}" 
+                               class="btn btn-info btn-lg">
+                                <i class="fas fa-play"></i> Start Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coping Strategies -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5><i class="fas fa-lightbulb"></i> Coping Strategies</h5>
+                </div>
+                <div class="card-body">
+                    {% if strategies %}
+                        <p class="mb-3">Here are some strategies that can help when you're feeling {{ mood.name.lower() }}:</p>
+                        {% for strategy in strategies %}
+                        <div class="strategy-item mb-3 p-3 bg-light rounded">
+                            <div class="d-flex align-items-start">
+                                <div class="strategy-icon me-3">
+                                    <i class="fas fa-check-circle text-success fa-lg"></i>
+                                </div>
+                                <div class="strategy-content">
+                                    <p class="mb-1">{{ strategy }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p>Strategies are being loaded...</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Emergency Resources -->
+            {% if mood_key in ['anxious', 'sad', 'angry'] %}
+            <div class="card shadow mb-4 border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5><i class="fas fa-exclamation-triangle"></i> Need More Support?</h5>
+                </div>
+                <div class="card-body">
+                    <p>Sometimes we need extra help, and that's completely okay!</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-user-friends fa-2x text-primary mb-2"></i>
+                                    <h6>Talk to Someone</h6>
+                                    <ul class="small text-start">
+                                        <li>A trusted adult</li>
+                                        <li>School counselor</li>
+                                        <li>Family member</li>
+                                        <li>Friend</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-0 bg-light h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-phone fa-2x text-success mb-2"></i>
+                                    <h6>Crisis Resources</h6>
+                                    <div class="small text-start">
+                                        <p><strong>Kids Help Phone:</strong><br>1-800-668-6868</p>
+                                        <p><strong>Crisis Text Line:</strong><br>Text HOME to 741741</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Personalized Tips -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-user"></i> Just for You</h5>
+                </div>
+                <div class="card-body">
+                    {% if mood_key == 'anxious' %}
+                    <h6>When anxiety feels overwhelming:</h6>
+                    <ul>
+                        <li>Remember: This feeling will pass</li>
+                        <li>Try the 5-4-3-2-1 grounding technique</li>
+                        <li>Focus on what you can control</li>
+                        <li>It's okay to ask for help</li>
+                    </ul>
+                    {% elif mood_key == 'angry' %}
+                    <h6>When anger is strong:</h6>
+                    <ul>
+                        <li>Your feelings are valid</li>
+                        <li>Take space before reacting</li>
+                        <li>Physical movement can help</li>
+                        <li>Express your feelings safely</li>
+                    </ul>
+                    {% elif mood_key == 'sad' %}
+                    <h6>When sadness feels heavy:</h6>
+                    <ul>
+                        <li>It's okay to feel sad</li>
+                        <li>Be gentle with yourself</li>
+                        <li>Connection with others helps</li>
+                        <li>Small acts of self-care matter</li>
+                    </ul>
+                    {% elif mood_key == 'confused' %}
+                    <h6>When things feel unclear:</h6>
+                    <ul>
+                        <li>Confusion is part of learning</li>
+                        <li>Break problems into smaller pieces</li>
+                        <li>It's okay not to have all the answers</li>
+                        <li>Writing can help clarify thoughts</li>
+                    </ul>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mb-4">
+                <div class="btn-group-vertical d-md-none">
+                    <a href="{{ url_for('mood_selected', mood_key=mood_key) }}" class="btn btn-primary mb-2">
+                        <i class="fas fa-journal-whills"></i> Journal About This
+                    </a>
+                    <a href="{{ url_for('breathing_exercise', mood_key=mood_key) }}" class="btn btn-info mb-2">
+                        <i class="fas fa-lungs"></i> Try Breathing Exercise
+                    </a>
+                    <a href="{{ url_for('wellness_hub') }}" class="btn btn-outline-success mb-2">
+                        <i class="fas fa-heart"></i> Wellness Hub
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </div>
+                
+                <div class="d-none d-md-block">
+                    <a href="{{ url_for('mood_selected', mood_key=mood_key) }}" class="btn btn-primary me-2">
+                        <i class="fas fa-journal-whills"></i> Journal About This
+                    </a>
+                    <a href="{{ url_for('breathing_exercise', mood_key=mood_key) }}" class="btn btn-info me-2">
+                        <i class="fas fa-lungs"></i> Try Breathing Exercise
+                    </a>
+                    <a href="{{ url_for('wellness_hub') }}" class="btn btn-outline-success me-2">
+                        <i class="fas fa-heart"></i> Wellness Hub
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </div>
+            </div>
+
+            <!-- Reminder -->
+            <div class="alert alert-info text-center">
+                <i class="fas fa-heart text-danger"></i>
+                <strong>Remember:</strong> Every feeling is valid and temporary. You're doing great by seeking help! 🌟
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.strategy-item {
+    border-left: 4px solid #ffc107;
+    transition: all 0.2s ease;
+}
+
+.strategy-item:hover {
+    background-color: #fff3cd !important;
+    transform: translateX(5px);
+}
+
+.border-warning {
+    border-color: #ffc107 !important;
+}
+</style>
+{% endblock %}

@@ -136,7 +136,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('home') }}">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-heart"></i> Moodly
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -145,14 +145,45 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('home') }}">
+                        <a class="nav-link" href="{{ url_for('index') }}">
                             <i class="fas fa-home"></i> Home
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('mood_tracker') }}">
-                            <i class="fas fa-chart-line"></i> My Journey
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="wellnessDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-heart"></i> Wellness
                         </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('wellness_hub') }}">
+                                <i class="fas fa-heart"></i> Wellness Hub
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('journal_templates') }}">
+                                <i class="fas fa-file-alt"></i> Journal Templates
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('breathing_exercise', mood_key='calm') }}">
+                                <i class="fas fa-lungs"></i> Breathing Exercises
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('coping_strategies_page', mood_key='anxious') }}">
+                                <i class="fas fa-lightbulb"></i> Coping Strategies
+                            </a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="progressDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-chart-line"></i> Progress
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('mood_tracker') }}">
+                                <i class="fas fa-timeline"></i> Mood Timeline
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('analytics_page') }}">
+                                <i class="fas fa-chart-bar"></i> Analytics
+                            </a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('achievements_page') }}">
+                                <i class="fas fa-trophy"></i> Achievements
+                            </a></li>
+                        </ul>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('about') }}">

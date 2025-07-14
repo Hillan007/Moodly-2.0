@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}Achievements - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <h2><i class="fas fa-trophy text-warning"></i> Your Achievements</h2>
+            <p class="lead">Celebrate your emotional wellness journey!</p>
+        </div>
+    </div>
+
+    {% if achieved %}
+    <!-- Unlocked Achievements -->
+    <div class="row">
+        <div class="col-12 mb-4">
+            <h3><i class="fas fa-medal text-success"></i> Unlocked Achievements ({{ achieved|length }})</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% for ach_id, achievement in achieved.items() %}
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow achievement-card achieved">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="achievement-emoji">{{ achievement.emoji }}</div>
+                        </div>
+                        <div class="col">
+                            <h5 class="card-title text-success mb-1">
+                                <i class="fas fa-check-circle"></i> {{ achievement.name }}
+                            </h5>
+                            <p class="card-text">{{ achievement.description }}</p>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar-check"></i> Completed
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Progress Section -->
+    {% if not_achieved %}
+    <div class="row mt-4">
+        <div class="col-12 mb-4">
+            <h3><i class="fas fa-target text-primary"></i> In Progress ({{ not_achieved|length }})</h3>
+            <p class="text-muted">Keep going! These achievements are waiting for you.</p>
+        </div>
+    </div>
+    
+    <div class="row">
+        {% for ach_id, achievement in not_achieved.items() %}
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow achievement-card locked">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="achievement-emoji locked-emoji">{{ achievement.emoji }}</div>
+                        </div>
+                        <div class="col">
+                            <h5 class="card-title text-muted mb-1">
+                                <i class="fas fa-lock"></i> {{ achievement.name }}
+                            </h5>
+                            <p class="card-text text-muted">{{ achievement.description }}</p>
+                            <small class="text-muted">
+                                {% if ach_id == 'first_entry' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Write your first journal entry!
+                                {% elif ach_id == 'streak_3' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Journal for 3 days in a row
+                                {% elif ach_id == 'streak_7' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Journal for 7 days in a row
+                                {% elif ach_id == 'streak_30' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Journal for 30 days in a row
+                                {% elif ach_id == 'mood_explorer' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Try journaling with different moods
+                                {% elif ach_id == 'gratitude_guru' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Use the gratitude template often
+                                {% elif ach_id == 'music_lover' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Discover music for different moods
+                                {% elif ach_id == 'self_care_champion' %}
+                                <i class="fas fa-lightbulb"></i> Tip: Try breathing exercises regularly
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Achievement Categories -->
+    <div class="row mt-5">
+        <div class="col-12 mb-4">
+            <h3><i class="fas fa-list text-info"></i> Achievement Categories</h3>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-fire fa-3x text-danger mb-3"></i>
+                    <h5>Consistency</h5>
+                    <p class="small">Build the habit of regular journaling</p>
+                    <div class="achievement-icons">
+                        {% for ach_id in ['streak_3', 'streak_7', 'streak_30'] %}
+                            <span class="badge {% if ach_id in achieved %}bg-success{% else %}bg-secondary{% endif %} me-1">
+                                {% if ach_id in achieved %}✓{% else %}○{% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-compass fa-3x text-primary mb-3"></i>
+                    <h5>Exploration</h5>
+                    <p class="small">Discover different aspects of emotions</p>
+                    <div class="achievement-icons">
+                        {% for ach_id in ['first_entry', 'mood_explorer', 'music_lover'] %}
+                            <span class="badge {% if ach_id in achieved %}bg-success{% else %}bg-secondary{% endif %} me-1">
+                                {% if ach_id in achieved %}✓{% else %}○{% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <i class="fas fa-heart fa-3x text-success mb-3"></i>
+                    <h5>Well-being</h5>
+                    <p class="small">Practice self-care and gratitude</p>
+                    <div class="achievement-icons">
+                        {% for ach_id in ['gratitude_guru', 'self_care_champion'] %}
+                            <span class="badge {% if ach_id in achieved %}bg-success{% else %}bg-secondary{% endif %} me-1">
+                                {% if ach_id in achieved %}✓{% else %}○{% endif %}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Motivational Section -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body text-center">
+                    <h4><i class="fas fa-star"></i> Keep Going!</h4>
+                    <p class="mb-3">Every journal entry, every moment of self-reflection, and every step toward understanding your emotions is an achievement worth celebrating!</p>
+                    {% if achieved|length == 0 %}
+                    <a href="{{ url_for('index') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-pen"></i> Start Your Journey
+                    </a>
+                    {% elif achieved|length < (achieved|length + not_achieved|length) %}
+                    <div>
+                        <p><strong>Progress: {{ achieved|length }} / {{ achieved|length + not_achieved|length }} achievements unlocked</strong></p>
+                        <div class="progress mb-3" style="height: 10px;">
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                 style="width: {{ (achieved|length / (achieved|length + not_achieved|length) * 100)|round(1) }}%"></div>
+                        </div>
+                        <a href="{{ url_for('wellness_hub') }}" class="btn btn-light btn-lg">
+                            <i class="fas fa-heart"></i> Continue Your Journey
+                        </a>
+                    </div>
+                    {% else %}
+                    <h5><i class="fas fa-crown"></i> Congratulations! You've unlocked all achievements!</h5>
+                    <p>You're a true emotional wellness champion! 🏆</p>
+                    <a href="{{ url_for('wellness_hub') }}" class="btn btn-light btn-lg">
+                        <i class="fas fa-heart"></i> Wellness Hub
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('analytics_page') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-chart-line"></i> View Analytics
+            </a>
+            <a href="{{ url_for('wellness_hub') }}" class="btn btn-outline-success me-2">
+                <i class="fas fa-heart"></i> Wellness Hub
+            </a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-home"></i> Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.achievement-card {
+    transition: all 0.3s ease;
+    border-left: 5px solid transparent;
+}
+
+.achievement-card.achieved {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.achievement-card.achieved:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(40, 167, 69, 0.2) !important;
+}
+
+.achievement-card.locked {
+    border-left-color: #6c757d;
+    opacity: 0.7;
+}
+
+.achievement-card.locked:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.achievement-emoji {
+    font-size: 3rem;
+    line-height: 1;
+}
+
+.locked-emoji {
+    filter: grayscale(100%);
+    opacity: 0.5;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+}
+
+.achievement-icons .badge {
+    font-size: 0.8rem;
+}
+
+.progress {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+</style>
+{% endblock %}

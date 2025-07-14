@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Wellness Hub - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Header -->
+        <div class="col-12 text-center mb-4">
+            <h2><i class="fas fa-heart text-danger"></i> Wellness Hub</h2>
+            <p class="lead">Your personal toolkit for emotional wellbeing</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Mood Analytics -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-chart-line"></i> Your Mood Journey</h5>
+                </div>
+                <div class="card-body">
+                    {% if analytics.total_entries > 0 %}
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h3 class="text-primary">{{ analytics.total_entries }}</h3>
+                                <small class="text-muted">Journal Entries</small>
+                            </div>
+                            <div class="col-6">
+                                <h3 class="text-success">{{ analytics.streak }}</h3>
+                                <small class="text-muted">Day Streak 🔥</small>
+                            </div>
+                        </div>
+                        
+                        {% if analytics.insights %}
+                        <div class="mt-3">
+                            <h6>Insights:</h6>
+                            {% for insight in analytics.insights %}
+                            <div class="alert alert-info py-2">{{ insight }}</div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                            <p>Start journaling to see your mood patterns!</p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('analytics_page') }}" class="btn btn-outline-primary">
+                            <i class="fas fa-search"></i> Detailed Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Achievements -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-trophy"></i> Recent Achievements</h5>
+                </div>
+                <div class="card-body">
+                    {% if achievements %}
+                        {% for ach_id in achievements %}
+                            {% set ach = achievement_details[ach_id] %}
+                            <div class="achievement-badge mb-2 p-3 bg-light rounded">
+                                <span class="fs-4">{{ ach.emoji }}</span>
+                                <strong class="ms-2">{{ ach.name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ ach.description }}</small>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-trophy fa-3x text-muted mb-3"></i>
+                            <p>Complete activities to earn achievements!</p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="text-center">
+                        <a href="{{ url_for('achievements_page') }}" class="btn btn-outline-success">
+                            <i class="fas fa-medal"></i> All Achievements
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wellness Tools -->
+    <div class="row">
+        <div class="col-12 mb-3">
+            <h3 class="text-center">🧘‍♀️ Wellness Tools</h3>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Breathing Exercises -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-lungs fa-3x text-info mb-3"></i>
+                    <h5>Breathing Exercises</h5>
+                    <p>Calm your mind with guided breathing</p>
+                    <div class="dropdown">
+                        <button class="btn btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Choose Your Mood
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for mood_key, mood in {
+                                'anxious': {'emoji': '😰', 'name': 'Anxious'},
+                                'angry': {'emoji': '😠', 'name': 'Angry'},
+                                'excited': {'emoji': '🤩', 'name': 'Excited'},
+                                'sad': {'emoji': '😢', 'name': 'Sad'}
+                            }.items() %}
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('breathing_exercise', mood_key=mood_key) }}">
+                                    {{ mood.emoji }} {{ mood.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coping Strategies -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-lightbulb fa-3x text-warning mb-3"></i>
+                    <h5>Coping Strategies</h5>
+                    <p>Practical tips for managing emotions</p>
+                    <div class="dropdown">
+                        <button class="btn btn-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            Get Help With...
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for mood_key, mood in {
+                                'anxious': {'emoji': '😰', 'name': 'Anxiety'},
+                                'angry': {'emoji': '😠', 'name': 'Anger'},
+                                'sad': {'emoji': '😢', 'name': 'Sadness'},
+                                'confused': {'emoji': '😕', 'name': 'Confusion'}
+                            }.items() %}
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('coping_strategies_page', mood_key=mood_key) }}">
+                                    {{ mood.emoji }} {{ mood.name }}
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Journal Templates -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-alt fa-3x text-success mb-3"></i>
+                    <h5>Journal Templates</h5>
+                    <p>Structured prompts for deeper reflection</p>
+                    <a href="{{ url_for('journal_templates') }}" class="btn btn-success">
+                        <i class="fas fa-pen"></i> Explore Templates
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h5>How are you feeling right now?</h5>
+                    <p class="text-muted">Start your wellness journey</p>
+                    <div class="btn-group flex-wrap" role="group">
+                        {% for mood_key, mood in {
+                            'happy': {'emoji': '😊', 'name': 'Happy'},
+                            'sad': {'emoji': '😢', 'name': 'Sad'},
+                            'anxious': {'emoji': '😰', 'name': 'Anxious'},
+                            'excited': {'emoji': '🤩', 'name': 'Excited'},
+                            'calm': {'emoji': '😌', 'name': 'Calm'},
+                            'angry': {'emoji': '😠', 'name': 'Angry'}
+                        }.items() %}
+                        <a href="{{ url_for('mood_selected', mood_key=mood_key) }}" 
+                           class="btn btn-outline-primary m-1">
+                            {{ mood.emoji }} {{ mood.name }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.hover-card:hover {
+    transform: translateY(-5px);
+}
+
+.achievement-badge {
+    border-left: 4px solid #28a745;
+}
+</style>
+{% endblock %}

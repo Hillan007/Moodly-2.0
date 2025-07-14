@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Journal Templates - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12 text-center mb-4">
+            <h2><i class="fas fa-file-alt text-success"></i> Journal Templates</h2>
+            <p class="lead">Structured prompts to guide your reflection</p>
+        </div>
+    </div>
+
+    <div class="row">
+        {% for template_id, template in templates.items() %}
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow-sm hover-card">
+                <div class="card-header {% if template_id == 'gratitude' %}bg-warning{% elif template_id == 'daily_reflection' %}bg-primary{% elif template_id == 'worry_dump' %}bg-info{% else %}bg-success{% endif %} text-white">
+                    <h5 class="mb-0">
+                        {% if template_id == 'gratitude' %}
+                            <i class="fas fa-heart"></i>
+                        {% elif template_id == 'daily_reflection' %}
+                            <i class="fas fa-calendar-day"></i>
+                        {% elif template_id == 'worry_dump' %}
+                            <i class="fas fa-cloud-rain"></i>
+                        {% else %}
+                            <i class="fas fa-star"></i>
+                        {% endif %}
+                        {{ template.name }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="template-description mb-3">
+                        {% if template_id == 'gratitude' %}
+                        <p>Focus on the positive things in your life. Gratitude practice can boost your mood and help you appreciate what you have.</p>
+                        {% elif template_id == 'daily_reflection' %}
+                        <p>A balanced check-in with yourself. Perfect for daily journaling and tracking your emotional journey.</p>
+                        {% elif template_id == 'worry_dump' %}
+                        <p>Release your worries and anxieties. Writing them down can help you process and manage difficult feelings.</p>
+                        {% elif template_id == 'dream_big' %}
+                        <p>Explore your goals and aspirations. Dream big and think about what you want to achieve!</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="template-prompts">
+                        <h6>Prompts include:</h6>
+                        <ul class="list-unstyled">
+                            {% for prompt in template.prompts[:3] %}
+                            <li><i class="fas fa-pen text-muted me-2"></i>{{ prompt }}</li>
+                            {% endfor %}
+                            {% if template.prompts|length > 3 %}
+                            <li><i class="fas fa-ellipsis-h text-muted me-2"></i>and more...</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="d-grid">
+                        <a href="{{ url_for('use_template', template_type=template_id) }}" 
+                           class="btn {% if template_id == 'gratitude' %}btn-warning{% elif template_id == 'daily_reflection' %}btn-primary{% elif template_id == 'worry_dump' %}btn-info{% else %}btn-success{% endif %}">
+                            <i class="fas fa-edit"></i> Use This Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Benefits Section -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h4 class="text-center mb-4"><i class="fas fa-lightbulb text-warning"></i> Why Use Templates?</h4>
+                    <div class="row">
+                        <div class="col-md-3 text-center mb-3">
+                            <i class="fas fa-compass fa-2x text-primary mb-2"></i>
+                            <h6>Structure</h6>
+                            <p class="small">Gives direction when you don't know where to start</p>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <i class="fas fa-search fa-2x text-success mb-2"></i>
+                            <h6>Self-Discovery</h6>
+                            <p class="small">Helps you explore different aspects of your emotions</p>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <i class="fas fa-brain fa-2x text-info mb-2"></i>
+                            <h6>Deeper Thinking</h6>
+                            <p class="small">Prompts encourage more thoughtful reflection</p>
+                        </div>
+                        <div class="col-md-3 text-center mb-3">
+                            <i class="fas fa-heart fa-2x text-danger mb-2"></i>
+                            <h6>Emotional Growth</h6>
+                            <p class="small">Builds emotional intelligence and self-awareness</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <h5>Not sure which template to use?</h5>
+            <p class="text-muted">Choose based on how you're feeling right now</p>
+            <div class="btn-group flex-wrap" role="group">
+                <a href="{{ url_for('use_template', template_type='gratitude') }}" class="btn btn-outline-warning m-1">
+                    😊 Feeling Happy
+                </a>
+                <a href="{{ url_for('use_template', template_type='worry_dump') }}" class="btn btn-outline-info m-1">
+                    😰 Feeling Worried
+                </a>
+                <a href="{{ url_for('use_template', template_type='daily_reflection') }}" class="btn btn-outline-primary m-1">
+                    😌 Just Checking In
+                </a>
+                <a href="{{ url_for('use_template', template_type='dream_big') }}" class="btn btn-outline-success m-1">
+                    🤩 Feeling Inspired
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <a href="{{ url_for('wellness_hub') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-heart"></i> Wellness Hub
+            </a>
+            <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-home"></i> Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.hover-card:hover {
+    transform: translateY(-3px);
+}
+
+.template-prompts li {
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}

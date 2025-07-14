@@ -2,13 +2,16 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 import os
 import json
 import datetime
-from datetime import date
+from datetime import date, timedelta
 # from openai import OpenAI  # Temporarily disabled
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 from dotenv import load_dotenv
 import requests
 import base64
+import random
+import statistics
+from collections import defaultdict, Counter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,6 +32,18 @@ openai_client = None
 # Data storage (in production, use a proper database)
 JOURNAL_ENTRIES = {}
 USER_DATA = {}
+
+# Achievement system
+ACHIEVEMENTS = {
+    'first_entry': {'name': 'First Steps', 'description': 'Wrote your first journal entry!', 'emoji': '👶'},
+    'streak_3': {'name': 'Building Habits', 'description': '3 days of journaling in a row!', 'emoji': '🔥'},
+    'streak_7': {'name': 'Week Warrior', 'description': '7 days of journaling in a row!', 'emoji': '⚡'},
+    'streak_30': {'name': 'Monthly Master', 'description': '30 days of journaling in a row!', 'emoji': '👑'},
+    'mood_explorer': {'name': 'Mood Explorer', 'description': 'Experienced 5 different moods!', 'emoji': '🗺️'},
+    'gratitude_guru': {'name': 'Gratitude Guru', 'description': 'Practiced gratitude 10 times!', 'emoji': '🙏'},
+    'music_lover': {'name': 'Music Lover', 'description': 'Discovered music for 5 different moods!', 'emoji': '🎵'},
+    'self_care_champion': {'name': 'Self-Care Champion', 'description': 'Used breathing exercises 5 times!', 'emoji': '🌟'}
+}
 
 # Mood options with emojis and colors
 MOODS = {
@@ -56,6 +71,167 @@ MOOD_MUSIC_GENRES = {
     'angry': ['rock', 'metal', 'intense', 'powerful', 'alternative', 'punk'],
     'confused': ['indie', 'alternative', 'thoughtful', 'introspective', 'folk', 'acoustic'],
     'grateful': ['inspirational', 'uplifting', 'gospel', 'positive', 'motivational', 'soul']
+}
+
+# Breathing exercises for different moods
+BREATHING_EXERCISES = {
+    'anxious': {
+        'name': '4-7-8 Calming Breath',
+        'description': 'Perfect for when you feel worried or nervous',
+        'steps': [
+            'Breathe in through your nose for 4 counts',
+            'Hold your breath for 7 counts',
+            'Breathe out through your mouth for 8 counts',
+            'Repeat 3-4 times'
+        ],
+        'duration': '2 minutes'
+    },
+    'angry': {
+        'name': 'Box Breathing',
+        'description': 'Helps you cool down when feeling upset',
+        'steps': [
+            'Breathe in for 4 counts',
+            'Hold for 4 counts',
+            'Breathe out for 4 counts',
+            'Hold empty for 4 counts',
+            'Repeat 5-6 times'
+        ],
+        'duration': '3 minutes'
+    },
+    'excited': {
+        'name': 'Grounding Breath',
+        'description': 'Helps you focus your exciting energy',
+        'steps': [
+            'Take 3 deep breaths',
+            'Notice 5 things you can see',
+            'Notice 4 things you can touch',
+            'Notice 3 things you can hear',
+            'Take 2 more deep breaths'
+        ],
+        'duration': '3 minutes'
+    },
+    'sad': {
+        'name': 'Heart Warming Breath',
+        'description': 'Gentle breathing to comfort yourself',
+        'steps': [
+            'Place one hand on your heart',
+            'Breathe slowly and deeply',
+            'Imagine warmth flowing to your heart',
+            'Say "I am kind to myself" with each breath',
+            'Continue for 2-3 minutes'
+        ],
+        'duration': '3 minutes'
+    },
+    'default': {
+        'name': 'Simple Deep Breathing',
+        'description': 'Good for any mood',
+        'steps': [
+            'Sit comfortably',
+            'Breathe in slowly for 4 counts',
+            'Breathe out slowly for 6 counts',
+            'Focus only on your breathing',
+            'Repeat 8-10 times'
+        ],
+        'duration': '2 minutes'
+    }
+}
+
+# Coping strategies for different moods
+COPING_STRATEGIES = {
+    'anxious': [
+        'Try the 5-4-3-2-1 grounding technique',
+        'Write down your worries, then write solutions',
+        'Take a short walk outside',
+        'Listen to calming music',
+        'Talk to someone you trust'
+    ],
+    'angry': [
+        'Count to 10 slowly',
+        'Do some physical exercise',
+        'Draw or scribble your feelings',
+        'Take space from the situation',
+        'Use "I feel..." statements'
+    ],
+    'sad': [
+        'Be gentle with yourself',
+        'Reach out to a friend or family member',
+        'Do something creative',
+        'Watch something funny',
+        'Practice self-compassion'
+    ],
+    'confused': [
+        'Make a list of what you know vs. what you don\'t know',
+        'Talk through your thoughts with someone',
+        'Break the problem into smaller parts',
+        'Take a break and come back later',
+        'Ask for help - it\'s okay!'
+    ],
+    'excited': [
+        'Channel your energy into something positive',
+        'Share your excitement with others',
+        'Make a plan for your goals',
+        'Create or build something',
+        'Celebrate your feelings!'
+    ]
+}
+
+# Enhanced mood playlists (fallback when Spotify isn't available)
+ENHANCED_MOOD_PLAYLISTS = {
+    'happy': [
+        {'title': 'Happy by Pharrell Williams', 'artist': 'Pharrell Williams', 'url': 'https://open.spotify.com/track/60nZcImufyMA1MKQY3dcCH', 'mood_match': 95},
+        {'title': 'Can\'t Stop the Feeling!', 'artist': 'Justin Timberlake', 'url': 'https://open.spotify.com/track/0BcuxEZ6V2Jd9A7s8a0fQG', 'mood_match': 92},
+        {'title': 'Good as Hell', 'artist': 'Lizzo', 'url': 'https://open.spotify.com/track/6KlmkRh8pqTymVl3ulkOoE', 'mood_match': 90},
+        {'title': 'Walking on Sunshine', 'artist': 'Katrina and the Waves', 'url': 'https://open.spotify.com/track/6SAzKR0EWKGfpKdQVVCjLY', 'mood_match': 88},
+        {'title': 'Three Little Birds', 'artist': 'Bob Marley', 'url': 'https://open.spotify.com/track/0XUfyU2QviPAs6bxSpXYG4', 'mood_match': 85}
+    ],
+    'calm': [
+        {'title': 'Weightless', 'artist': 'Marconi Union', 'url': 'https://open.spotify.com/track/1nrKCDJYHd9m3nj5HwJfJe', 'mood_match': 98},
+        {'title': 'Claire de Lune', 'artist': 'Claude Debussy', 'url': 'https://open.spotify.com/track/6GamyPTd8J9AcfLKhORj2K', 'mood_match': 95},
+        {'title': 'Spiegel im Spiegel', 'artist': 'Arvo Pärt', 'url': 'https://open.spotify.com/track/0dUrOmfBjIgWfLNxG9M1u5', 'mood_match': 92},
+        {'title': 'Aqueous Transmission', 'artist': 'Incubus', 'url': 'https://open.spotify.com/track/6ZPqLiNTfSy1IEqj1dPuYw', 'mood_match': 88},
+        {'title': 'Mad World', 'artist': 'Gary Jules', 'url': 'https://open.spotify.com/track/3JOVTQ5h4HIqRuMX9gEVSI', 'mood_match': 85}
+    ],
+    # Add more enhanced playlists for other moods...
+}
+
+# Journal entry templates
+JOURNAL_TEMPLATES = {
+    'gratitude': {
+        'name': 'Gratitude List',
+        'prompts': [
+            'Three things I\'m grateful for today:',
+            'Someone who made me smile:',
+            'A simple pleasure I enjoyed:',
+            'Something about myself I appreciate:'
+        ]
+    },
+    'daily_reflection': {
+        'name': 'Daily Check-in',
+        'prompts': [
+            'How I\'m feeling right now:',
+            'The best part of my day:',
+            'Something that challenged me:',
+            'What I\'m looking forward to:'
+        ]
+    },
+    'worry_dump': {
+        'name': 'Worry Release',
+        'prompts': [
+            'What\'s worrying me:',
+            'What I can control about this:',
+            'What I can\'t control:',
+            'One small step I can take:'
+        ]
+    },
+    'dream_big': {
+        'name': 'Dreams & Goals',
+        'prompts': [
+            'Something I want to achieve:',
+            'Why this matters to me:',
+            'First step I could take:',
+            'Who could help me:'
+        ]
+    }
 }
 
 def get_user_id():
@@ -291,13 +467,13 @@ def get_fallback_songs(mood, limit=5):
     return result
 
 @app.route('/')
-def home():
+def index():
     return render_template('index.html', moods=MOODS)
 
 @app.route('/mood/<mood_key>')
 def mood_selected(mood_key):
     if mood_key not in MOODS:
-        return redirect(url_for('home'))
+        return redirect(url_for('index'))
     
     mood_info = MOODS[mood_key]
     prompt = get_ai_prompt(mood_key)
@@ -379,8 +555,317 @@ def get_music_for_mood(mood_key):
         'mood_info': MOODS[mood_key]
     })
 
+def calculate_mood_streak(user_id):
+    """Calculate current journaling streak for user"""
+    if user_id not in JOURNAL_ENTRIES:
+        return 0
+    
+    entries = JOURNAL_ENTRIES[user_id]
+    if not entries:
+        return 0
+    
+    # Sort entries by date
+    sorted_entries = sorted(entries, key=lambda x: x['date'], reverse=True)
+    
+    streak = 0
+    current_date = date.today()
+    
+    for entry in sorted_entries:
+        entry_date = datetime.datetime.strptime(entry['date'], '%Y-%m-%d').date()
+        if entry_date == current_date or entry_date == current_date - timedelta(days=streak):
+            streak += 1
+            current_date = entry_date
+        else:
+            break
+    
+    return streak
+
+def get_mood_analytics(user_id):
+    """Get mood analytics for user"""
+    if user_id not in JOURNAL_ENTRIES:
+        return {'total_entries': 0, 'mood_distribution': {}, 'streak': 0, 'insights': []}
+    
+    entries = JOURNAL_ENTRIES[user_id]
+    total_entries = len(entries)
+    
+    if total_entries == 0:
+        return {'total_entries': 0, 'mood_distribution': {}, 'streak': 0, 'insights': []}
+    
+    # Calculate mood distribution
+    mood_counts = Counter(entry['mood'] for entry in entries)
+    mood_distribution = {mood: count for mood, count in mood_counts.items()}
+    
+    # Calculate streak
+    streak = calculate_mood_streak(user_id)
+    
+    # Generate insights
+    insights = []
+    if total_entries >= 7:
+        most_common_mood = mood_counts.most_common(1)[0][0]
+        insights.append(f"Your most common mood this week is {MOODS[most_common_mood]['emoji']} {MOODS[most_common_mood]['name']}")
+    
+    if streak >= 3:
+        insights.append(f"Amazing! You're on a {streak}-day journaling streak! 🔥")
+    
+    recent_entries = entries[-7:] if len(entries) >= 7 else entries
+    recent_moods = [entry['mood'] for entry in recent_entries]
+    if 'grateful' in recent_moods:
+        insights.append("You've been practicing gratitude - that's wonderful for your wellbeing! 🙏")
+    
+    return {
+        'total_entries': total_entries,
+        'mood_distribution': mood_distribution,
+        'streak': streak,
+        'insights': insights
+    }
+
+def check_achievements(user_id):
+    """Check and award new achievements"""
+    if user_id not in USER_DATA:
+        USER_DATA[user_id] = {'achievements': [], 'stats': {}}
+    
+    user_data = USER_DATA[user_id]
+    current_achievements = set(user_data.get('achievements', []))
+    new_achievements = []
+    
+    if user_id in JOURNAL_ENTRIES:
+        entries = JOURNAL_ENTRIES[user_id]
+        total_entries = len(entries)
+        streak = calculate_mood_streak(user_id)
+        unique_moods = len(set(entry['mood'] for entry in entries))
+        grateful_entries = len([e for e in entries if e['mood'] == 'grateful'])
+        
+        # Check for achievements
+        if total_entries >= 1 and 'first_entry' not in current_achievements:
+            new_achievements.append('first_entry')
+        
+        if streak >= 3 and 'streak_3' not in current_achievements:
+            new_achievements.append('streak_3')
+        
+        if streak >= 7 and 'streak_7' not in current_achievements:
+            new_achievements.append('streak_7')
+        
+        if streak >= 30 and 'streak_30' not in current_achievements:
+            new_achievements.append('streak_30')
+        
+        if unique_moods >= 5 and 'mood_explorer' not in current_achievements:
+            new_achievements.append('mood_explorer')
+        
+        if grateful_entries >= 10 and 'gratitude_guru' not in current_achievements:
+            new_achievements.append('gratitude_guru')
+    
+    # Add new achievements
+    user_data['achievements'].extend(new_achievements)
+    
+    return new_achievements
+
+def get_breathing_exercise(mood):
+    """Get appropriate breathing exercise for mood"""
+    return BREATHING_EXERCISES.get(mood, BREATHING_EXERCISES['default'])
+
+def get_coping_strategies(mood):
+    """Get coping strategies for mood"""
+    strategies = COPING_STRATEGIES.get(mood, [])
+    # Return 3 random strategies
+    return random.sample(strategies, min(3, len(strategies))) if strategies else []
+
+def get_journal_template(template_type):
+    """Get journal template"""
+    return JOURNAL_TEMPLATES.get(template_type, JOURNAL_TEMPLATES['daily_reflection'])
+
+def predict_mood_patterns(user_id):
+    """Simple mood pattern analysis"""
+    if user_id not in JOURNAL_ENTRIES:
+        return {}
+    
+    entries = JOURNAL_ENTRIES[user_id]
+    if len(entries) < 7:
+        return {'message': 'Keep journaling to see patterns!'}
+    
+    # Analyze mood patterns by day of week
+    mood_by_day = defaultdict(list)
+    for entry in entries:
+        entry_date = datetime.datetime.strptime(entry['date'], '%Y-%m-%d')
+        day_of_week = entry_date.weekday()  # 0 = Monday
+        mood_by_day[day_of_week].append(entry['mood'])
+    
+    insights = []
+    day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    
+    for day, moods in mood_by_day.items():
+        if len(moods) >= 2:
+            most_common = Counter(moods).most_common(1)[0][0]
+            insights.append(f"You tend to feel {MOODS[most_common]['name']} on {day_names[day]}s")
+    
+    return {'insights': insights[:3]}  # Return top 3 insights
+
 # For Vercel deployment - export the app object
 application = app
 
+@app.route('/breathing/<mood_key>')
+def breathing_exercise(mood_key):
+    """Show breathing exercise for specific mood"""
+    if mood_key not in MOODS:
+        return redirect(url_for('index'))
+    
+    exercise = get_breathing_exercise(mood_key)
+    return render_template('breathing.html', 
+                         mood=MOODS[mood_key], 
+                         exercise=exercise,
+                         mood_key=mood_key)
+
+@app.route('/wellness')
+def wellness_hub():
+    """Wellness hub with various tools"""
+    user_id = get_user_id()
+    analytics = get_mood_analytics(user_id)
+    recent_achievements = USER_DATA.get(user_id, {}).get('achievements', [])[-3:]  # Last 3 achievements
+    
+    return render_template('wellness.html', 
+                         analytics=analytics,
+                         achievements=recent_achievements,
+                         achievement_details=ACHIEVEMENTS)
+
+@app.route('/analytics')
+def analytics_page():
+    """Detailed analytics page"""
+    user_id = get_user_id()
+    analytics = get_mood_analytics(user_id)
+    patterns = predict_mood_patterns(user_id)
+    
+    return render_template('analytics.html', 
+                         analytics=analytics,
+                         patterns=patterns,
+                         moods=MOODS)
+
+@app.route('/templates')
+def journal_templates():
+    """Show available journal templates"""
+    return render_template('templates.html', templates=JOURNAL_TEMPLATES)
+
+@app.route('/template/<template_type>')
+def use_template(template_type):
+    """Use a specific journal template"""
+    if template_type not in JOURNAL_TEMPLATES:
+        return redirect(url_for('journal_templates'))
+    
+    template = get_journal_template(template_type)
+    return render_template('template_journal.html', 
+                         template=template,
+                         template_type=template_type)
+
+@app.route('/coping/<mood_key>')
+def coping_strategies_page(mood_key):
+    """Show coping strategies for specific mood"""
+    if mood_key not in MOODS:
+        return redirect(url_for('index'))
+    
+    strategies = get_coping_strategies(mood_key)
+    exercise = get_breathing_exercise(mood_key)
+    
+    return render_template('coping.html',
+                         mood=MOODS[mood_key],
+                         mood_key=mood_key,
+                         strategies=strategies,
+                         exercise=exercise)
+
+@app.route('/achievements')
+def achievements_page():
+    """Show user achievements"""
+    user_id = get_user_id()
+    user_achievements = USER_DATA.get(user_id, {}).get('achievements', [])
+    
+    achieved = {ach_id: ACHIEVEMENTS[ach_id] for ach_id in user_achievements if ach_id in ACHIEVEMENTS}
+    not_achieved = {ach_id: details for ach_id, details in ACHIEVEMENTS.items() if ach_id not in user_achievements}
+    
+    return render_template('achievements.html',
+                         achieved=achieved,
+                         not_achieved=not_achieved)
+
+@app.route('/api/achievements/check')
+def check_achievements_api():
+    """API endpoint to check for new achievements"""
+    user_id = get_user_id()
+    new_achievements = check_achievements(user_id)
+    
+    return jsonify({
+        'new_achievements': [
+            {'id': ach_id, 'details': ACHIEVEMENTS[ach_id]} 
+            for ach_id in new_achievements if ach_id in ACHIEVEMENTS
+        ]
+    })
+
+@app.route('/api/analytics')
+def analytics_api():
+    """API endpoint for analytics data"""
+    user_id = get_user_id()
+    analytics = get_mood_analytics(user_id)
+    patterns = predict_mood_patterns(user_id)
+    
+    return jsonify({
+        'analytics': analytics,
+        'patterns': patterns
+    })
+
+@app.route('/api/coping/<mood_key>')
+def coping_api(mood_key):
+    """API endpoint for coping strategies"""
+    if mood_key not in MOODS:
+        return jsonify({'error': 'Invalid mood'}), 400
+    
+    strategies = get_coping_strategies(mood_key)
+    exercise = get_breathing_exercise(mood_key)
+    
+    return jsonify({
+        'mood': mood_key,
+        'strategies': strategies,
+        'breathing_exercise': exercise
+    })
+
+@app.route('/submit_template_entry', methods=['POST'])
+def submit_template_entry():
+    """Submit a journal entry from a template"""
+    data = request.get_json()
+    user_id = get_user_id()
+    
+    if user_id not in JOURNAL_ENTRIES:
+        JOURNAL_ENTRIES[user_id] = []
+    
+    # Combine template responses into a single entry
+    template_responses = data.get('responses', {})
+    combined_entry = "\n\n".join([f"{prompt}: {response}" for prompt, response in template_responses.items()])
+    
+    entry = {
+        'id': str(uuid.uuid4()),
+        'mood': data.get('mood', 'happy'),
+        'entry': combined_entry,
+        'date': date.today().strftime('%Y-%m-%d'),
+        'timestamp': datetime.datetime.now().isoformat(),
+        'template_type': data.get('template_type', 'custom')
+    }
+    
+    JOURNAL_ENTRIES[user_id].append(entry)
+    
+    # Check for new achievements
+    new_achievements = check_achievements(user_id)
+    
+    # Generate motivational message
+    motivational_messages = [
+        "Great job expressing yourself! 🌟",
+        "Your thoughts and feelings matter! 💖",
+        "You're building such great self-awareness! 🧠",
+        "Keep up the amazing work! ✨",
+        "Every entry helps you grow! 🌱"
+    ]
+    
+    return jsonify({
+        'success': True,
+        'message': random.choice(motivational_messages),
+        'new_achievements': [
+            {'id': ach_id, 'details': ACHIEVEMENTS[ach_id]} 
+            for ach_id in new_achievements if ach_id in ACHIEVEMENTS
+        ]
+    })
+
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5000)

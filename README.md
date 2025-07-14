@@ -9,6 +9,7 @@ Try Moodly now without any setup - it's live and ready to use!
 
 ## ✨ Features
 
+### Core Features
 - **Mood Selection**: Emoji-based mood picker with 8 different emotions
 - **AI-Powered Prompts**: Contextual journaling prompts based on selected mood
 - **Journal Writing**: Safe space for tweens to express their thoughts and feelings
@@ -18,6 +19,18 @@ Try Moodly now without any setup - it's live and ready to use!
 - **Age-Appropriate**: Designed specifically for tweens with appropriate language and tone
 - **Motivational Messages**: Uplifting feedback after each journal entry
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
+
+### 🆕 New Wellness Features
+- **🧘‍♀️ Breathing Exercises**: Guided breathing exercises for anxiety, anger, sadness, and excitement
+- **🏆 Achievement System**: 8 unlockable achievements to encourage consistent journaling
+- **📊 Enhanced Analytics**: Mood streaks, pattern analysis, and personalized insights
+- **📝 Journal Templates**: 4 structured templates (Gratitude, Daily Reflection, Worry Release, Dreams & Goals)
+- **💡 Coping Strategies**: Evidence-based strategies for managing difficult emotions
+- **🌟 Wellness Hub**: Centralized access to all wellness tools and resources
+- **📈 Mood Predictions**: Simple pattern analysis to help understand emotional trends
+- **🎯 Gamification**: Streaks, badges, and progress tracking to maintain engagement
+- **🆘 Crisis Resources**: Access to mental health resources and emergency contacts
+- **🎨 Enhanced UI**: Improved navigation with dropdowns and better mobile experience
 
 ## 🚀 Quick Start
 
@@ -58,11 +71,13 @@ Try Moodly now without any setup - it's live and ready to use!
 ## 🎯 How It Works
 
 1. **Choose Your Mood**: Select from 8 emoji-based mood options
-2. **Get a Prompt**: Receive an age-appropriate journaling prompt
-3. **🎵 Discover Music**: Get mood-based song recommendations with preview playback
-4. **Write Freely**: Express thoughts and feelings in a safe, private space
-5. **Get Encouragement**: Receive motivational messages after writing
-6. **Track Progress**: View your emotional journey over time
+2. **Explore Wellness Tools**: Access breathing exercises, coping strategies, or journal templates
+3. **Get a Prompt**: Receive an age-appropriate journaling prompt or use a structured template
+4. **🎵 Discover Music**: Get mood-based song recommendations with preview playback
+5. **Write Freely**: Express thoughts and feelings in a safe, private space
+6. **Get Encouragement**: Receive motivational messages and unlock achievements
+7. **Track Progress**: View your emotional journey, streaks, and patterns over time
+8. **Build Skills**: Learn coping strategies and practice breathing exercises for emotional regulation
 
 ## 🔧 Configuration
 
@@ -103,17 +118,29 @@ FLASK_ENV=development
 
 ```
 Moodly_App/
-├── moodly_app.py          # Main Flask application
+├── moodly_app.py          # Main Flask application with all wellness features
+├── index.py               # Vercel deployment entry point
+├── app.py                 # Alternative entry point
+├── test_features.py       # Feature testing script
 ├── requirements.txt       # Python dependencies
 ├── .env.example          # Environment variables template
+├── .vercelignore         # Vercel deployment ignore file
+├── vercel.json           # Vercel deployment configuration
 ├── PRD.MD                # Product Requirements Document
 ├── README.md             # This file
 ├── templates/            # HTML templates
-│   ├── base.html         # Base template with common layout
+│   ├── base.html         # Base template with enhanced navigation
 │   ├── index.html        # Home page with mood selection
 │   ├── journal.html      # Journaling page
 │   ├── tracker.html      # Mood tracking timeline
-│   └── about.html        # About page
+│   ├── about.html        # About page
+│   ├── wellness.html     # Wellness hub dashboard
+│   ├── analytics.html    # Advanced mood analytics
+│   ├── breathing.html    # Interactive breathing exercises
+│   ├── coping.html       # Coping strategies and resources
+│   ├── achievements.html # Achievement system
+│   ├── templates.html    # Journal template selection
+│   └── template_journal.html # Structured journaling with templates
 └── static/               # Static assets
     └── style.css         # Additional custom styles
 ```
@@ -143,14 +170,34 @@ Moodly supports several UN Sustainable Development Goals:
 - **Goal 4**: Quality Education (emotional learning)
 - **Goal 10**: Reduced Inequalities (accessible mental health tools)
 
-## 🔄 Future Enhancements
+## 🔄 Implemented Enhancements
 
-Based on the PRD, potential future features include:
-- Spotify integration for mood-based music suggestions
-- Voice-to-text journaling
-- Export/backup functionality
-- Educator dashboard
-- Parent/guardian insights (with permission)
+All the recommended features have been successfully implemented:
+
+### ✅ **Immediate Enhancements (High Impact)**
+- **Enhanced Mood Tracking & Analytics**: Mood streaks, weekly/monthly summaries, pattern recognition
+- **Improved Music Experience**: Enhanced playlists with mood matching scores
+- **Enhanced Journaling Features**: 4 structured templates (gratitude, daily reflection, worry dump, dream big)
+- **Achievement System**: 8 progressive achievements with beautiful UI
+
+### ✅ **Advanced Features (Higher Impact)**
+- **AI-Powered Insights**: Pattern analysis and mood prediction
+- **Wellness Integration**: Breathing exercises, coping strategies, mindfulness activities
+- **Educational Content**: Age-appropriate emotional intelligence resources
+- **Customization & Personalization**: Enhanced UI with dropdown navigation
+
+### ✅ **Creative Additions**
+- **Gamification Elements**: Achievement badges, progress tracking, mood streaks
+- **Export & Memory Features**: Visual analytics and progress summaries
+
+### ✅ **Safety & Support Enhancements**
+- **Enhanced Safety Features**: Crisis resources, emergency contacts, mental health resources
+- **Content Moderation**: Age-appropriate guidance and positive messaging
+
+### ✅ **Technical Improvements**
+- **Enhanced Navigation**: Dropdown menus, better mobile experience
+- **Responsive Design**: Optimized for all devices
+- **API Endpoints**: RESTful APIs for achievements, analytics, and coping strategies
 
 ## 🤝 For Educators & Parents
 

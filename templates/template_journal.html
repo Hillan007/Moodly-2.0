@@ -1,0 +1,260 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name }} - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2>
+                    {% if template_type == 'gratitude' %}
+                        <i class="fas fa-heart text-warning"></i>
+                    {% elif template_type == 'daily_reflection' %}
+                        <i class="fas fa-calendar-day text-primary"></i>
+                    {% elif template_type == 'worry_dump' %}
+                        <i class="fas fa-cloud-rain text-info"></i>
+                    {% else %}
+                        <i class="fas fa-star text-success"></i>
+                    {% endif %}
+                    {{ template.name }}
+                </h2>
+                <p class="lead">
+                    {% if template_type == 'gratitude' %}
+                        Take a moment to appreciate the good things in your life
+                    {% elif template_type == 'daily_reflection' %}
+                        Check in with yourself and reflect on your day
+                    {% elif template_type == 'worry_dump' %}
+                        Release your worries and find ways to feel better
+                    {% elif template_type == 'dream_big' %}
+                        Explore your dreams and make plans to achieve them
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Mood Selection First -->
+            <div class="card shadow mb-4">
+                <div class="card-header {% if template_type == 'gratitude' %}bg-warning{% elif template_type == 'daily_reflection' %}bg-primary{% elif template_type == 'worry_dump' %}bg-info{% else %}bg-success{% endif %} text-white">
+                    <h5><i class="fas fa-heart"></i> How are you feeling?</h5>
+                </div>
+                <div class="card-body">
+                    <p>Select your current mood to personalize your experience:</p>
+                    <div class="row text-center" id="moodSelection">
+                        {% for mood_key, mood in {
+                            'happy': {'emoji': '😊', 'name': 'Happy', 'color': '#FFD700'},
+                            'sad': {'emoji': '😢', 'name': 'Sad', 'color': '#87CEEB'},
+                            'excited': {'emoji': '🤩', 'name': 'Excited', 'color': '#FF6347'},
+                            'anxious': {'emoji': '😰', 'name': 'Anxious', 'color': '#DDA0DD'},
+                            'calm': {'emoji': '😌', 'name': 'Calm', 'color': '#98FB98'},
+                            'angry': {'emoji': '😠', 'name': 'Angry', 'color': '#FF4500'},
+                            'confused': {'emoji': '😕', 'name': 'Confused', 'color': '#F0E68C'},
+                            'grateful': {'emoji': '🙏', 'name': 'Grateful', 'color': '#DEB887'}
+                        }.items() %}
+                        <div class="col-md-3 col-6 mb-3">
+                            <button class="btn btn-outline-secondary mood-btn w-100" 
+                                    data-mood="{{ mood_key }}" 
+                                    data-color="{{ mood.color }}">
+                                <div class="fs-2">{{ mood.emoji }}</div>
+                                <div>{{ mood.name }}</div>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Template Form -->
+            <div class="card shadow">
+                <div class="card-header {% if template_type == 'gratitude' %}bg-warning{% elif template_type == 'daily_reflection' %}bg-primary{% elif template_type == 'worry_dump' %}bg-info{% else %}bg-success{% endif %} text-white">
+                    <h5><i class="fas fa-pen"></i> Your {{ template.name }}</h5>
+                </div>
+                <div class="card-body">
+                    <form id="templateForm">
+                        {% for prompt in template.prompts %}
+                        <div class="mb-4">
+                            <label for="prompt{{ loop.index }}" class="form-label">
+                                <strong>{{ prompt }}</strong>
+                            </label>
+                            <textarea class="form-control" 
+                                      id="prompt{{ loop.index }}" 
+                                      name="prompt{{ loop.index }}"
+                                      rows="3" 
+                                      placeholder="Take your time... there's no rush."></textarea>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Submit Button -->
+                        <div class="text-center">
+                            <button type="submit" 
+                                    class="btn {% if template_type == 'gratitude' %}btn-warning{% elif template_type == 'daily_reflection' %}btn-primary{% elif template_type == 'worry_dump' %}btn-info{% else %}btn-success{% endif %} btn-lg"
+                                    id="submitTemplate"
+                                    disabled>
+                                <i class="fas fa-heart"></i> Complete My {{ template.name }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tips Section -->
+            <div class="card bg-light mt-4">
+                <div class="card-body">
+                    <h6><i class="fas fa-lightbulb text-warning"></i> Tips for this template:</h6>
+                    <ul class="small">
+                        {% if template_type == 'gratitude' %}
+                        <li>Think about big and small things you appreciate</li>
+                        <li>Include people, experiences, and simple pleasures</li>
+                        <li>Be specific - "my mom's hugs" instead of just "my family"</li>
+                        {% elif template_type == 'daily_reflection' %}
+                        <li>Be honest about both positive and challenging moments</li>
+                        <li>Think about what you learned today</li>
+                        <li>Consider how you handled different situations</li>
+                        {% elif template_type == 'worry_dump' %}
+                        <li>Write down everything that's bothering you</li>
+                        <li>Don't judge your worries - they're all valid</li>
+                        <li>Focus on what you can control vs. what you can't</li>
+                        {% elif template_type == 'dream_big' %}
+                        <li>Don't limit yourself - dream as big as you want!</li>
+                        <li>Think about short-term and long-term goals</li>
+                        <li>Consider who could help you achieve your dreams</li>
+                        {% endif %}
+                        <li>Take your time - there's no rush</li>
+                        <li>Write as much or as little as feels right</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="text-center mt-4 mb-4">
+                <a href="{{ url_for('journal_templates') }}" class="btn btn-outline-secondary me-2">
+                    <i class="fas fa-arrow-left"></i> Other Templates
+                </a>
+                <a href="{{ url_for('wellness_hub') }}" class="btn btn-outline-primary">
+                    <i class="fas fa-heart"></i> Wellness Hub
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedMood = null;
+
+// Mood selection
+document.querySelectorAll('.mood-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        // Remove active class from all buttons
+        document.querySelectorAll('.mood-btn').forEach(b => {
+            b.classList.remove('btn-primary');
+            b.classList.add('btn-outline-secondary');
+        });
+        
+        // Add active class to clicked button
+        this.classList.remove('btn-outline-secondary');
+        this.classList.add('btn-primary');
+        
+        selectedMood = this.dataset.mood;
+        
+        // Enable submit button if mood is selected
+        document.getElementById('submitTemplate').disabled = false;
+        
+        // Update button color
+        const color = this.dataset.color;
+        this.style.backgroundColor = color;
+        this.style.borderColor = color;
+    });
+});
+
+// Form submission
+document.getElementById('templateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    if (!selectedMood) {
+        alert('Please select your mood first!');
+        return;
+    }
+    
+    // Collect all responses
+    const responses = {};
+    const prompts = {{ template.prompts | tojson }};
+    
+    prompts.forEach((prompt, index) => {
+        const textarea = document.getElementById(`prompt${index + 1}`);
+        responses[prompt] = textarea.value.trim();
+    });
+    
+    // Check if at least one response is filled
+    const hasContent = Object.values(responses).some(response => response.length > 0);
+    if (!hasContent) {
+        alert('Please write something in at least one prompt!');
+        return;
+    }
+    
+    // Submit the entry
+    const submitButton = document.getElementById('submitTemplate');
+    submitButton.disabled = true;
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    
+    fetch('/submit_template_entry', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            mood: selectedMood,
+            template_type: '{{ template_type }}',
+            responses: responses
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const successDiv = document.createElement('div');
+            successDiv.className = 'alert alert-success text-center';
+            successDiv.innerHTML = `
+                <h5><i class="fas fa-check-circle"></i> ${data.message}</h5>
+                <p>Your {{ template.name }} has been saved!</p>
+            `;
+            
+            // Show any new achievements
+            if (data.new_achievements && data.new_achievements.length > 0) {
+                data.new_achievements.forEach(achievement => {
+                    const achievementDiv = document.createElement('div');
+                    achievementDiv.className = 'alert alert-warning text-center mt-2';
+                    achievementDiv.innerHTML = `
+                        <h6><i class="fas fa-trophy"></i> New Achievement!</h6>
+                        <p>${achievement.details.emoji} ${achievement.details.name}</p>
+                        <small>${achievement.details.description}</small>
+                    `;
+                    successDiv.appendChild(achievementDiv);
+                });
+            }
+            
+            // Replace form with success message
+            document.querySelector('.card-body').innerHTML = successDiv.outerHTML + `
+                <div class="text-center mt-4">
+                    <a href="{{ url_for('mood_tracker') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-chart-line"></i> View Progress
+                    </a>
+                    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-home"></i> Back to Home
+                    </a>
+                </div>
+            `;
+        } else {
+            alert('There was an error saving your entry. Please try again.');
+            submitButton.disabled = false;
+            submitButton.innerHTML = '<i class="fas fa-heart"></i> Complete My {{ template.name }}';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was an error saving your entry. Please try again.');
+        submitButton.disabled = false;
+        submitButton.innerHTML = '<i class="fas fa-heart"></i> Complete My {{ template.name }}';
+    });
+});
+</script>
+{% endblock %}

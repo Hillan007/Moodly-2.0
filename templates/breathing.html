@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Breathing Exercise - {{ mood.name }} - Moodly{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Header -->
+            <div class="text-center mb-4">
+                <h2>{{ mood.emoji }} Breathing Exercise</h2>
+                <p class="lead">{{ exercise.description }}</p>
+                <div class="alert alert-info">
+                    <i class="fas fa-clock"></i> Duration: {{ exercise.duration }}
+                </div>
+            </div>
+
+            <!-- Breathing Exercise Card -->
+            <div class="card shadow-lg">
+                <div class="card-header text-center" style="background-color: {{ mood.color }}20;">
+                    <h4>{{ exercise.name }}</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Instructions -->
+                    <div class="mb-4">
+                        <h5>Instructions:</h5>
+                        <ol class="list-group list-group-numbered">
+                            {% for step in exercise.steps %}
+                            <li class="list-group-item">{{ step }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+
+                    <!-- Breathing Animation -->
+                    <div class="text-center mb-4">
+                        <div id="breathingCircle" class="breathing-circle mx-auto" style="border-color: {{ mood.color }};">
+                            <div class="breathing-text">
+                                <span id="breathingInstruction">Click Start</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Controls -->
+                    <div class="text-center">
+                        <button id="startBreathing" class="btn btn-primary btn-lg me-2">
+                            <i class="fas fa-play"></i> Start Exercise
+                        </button>
+                        <button id="stopBreathing" class="btn btn-secondary btn-lg" style="display: none;">
+                            <i class="fas fa-stop"></i> Stop
+                        </button>
+                    </div>
+
+                    <!-- Progress -->
+                    <div class="mt-4">
+                        <div class="progress" style="height: 10px;">
+                            <div id="breathingProgress" class="progress-bar" role="progressbar" style="width: 0%; background-color: {{ mood.color }};"></div>
+                        </div>
+                        <div class="text-center mt-2">
+                            <small class="text-muted">Round <span id="currentRound">0</span> of 5</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center mt-4">
+                <a href="{{ url_for('coping_strategies_page', mood_key=mood_key) }}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-lightbulb"></i> Get Coping Tips
+                </a>
+                <a href="{{ url_for('mood_selected', mood_key=mood_key) }}" class="btn btn-outline-success">
+                    <i class="fas fa-journal-whills"></i> Start Journaling
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-home"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.breathing-circle {
+    width: 200px;
+    height: 200px;
+    border: 4px solid;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 4s ease-in-out;
+    position: relative;
+}
+
+.breathing-circle.inhale {
+    transform: scale(1.3);
+}
+
+.breathing-circle.exhale {
+    transform: scale(0.8);
+}
+
+.breathing-text {
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.breathing-circle::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    height: 80%;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.1;
+}
+</style>
+
+<script>
+let breathingInterval;
+let currentRound = 0;
+const totalRounds = 5;
+let isBreathing = false;
+
+document.getElementById('startBreathing').addEventListener('click', startBreathingExercise);
+document.getElementById('stopBreathing').addEventListener('click', stopBreathingExercise);
+
+function startBreathingExercise() {
+    isBreathing = true;
+    currentRound = 0;
+    document.getElementById('startBreathing').style.display = 'none';
+    document.getElementById('stopBreathing').style.display = 'inline-block';
+    
+    runBreathingCycle();
+}
+
+function stopBreathingExercise() {
+    isBreathing = false;
+    clearTimeout(breathingInterval);
+    document.getElementById('startBreathing').style.display = 'inline-block';
+    document.getElementById('stopBreathing').style.display = 'none';
+    document.getElementById('breathingInstruction').textContent = 'Click Start';
+    document.getElementById('breathingCircle').classList.remove('inhale', 'exhale');
+    document.getElementById('currentRound').textContent = '0';
+    document.getElementById('breathingProgress').style.width = '0%';
+}
+
+function runBreathingCycle() {
+    if (!isBreathing || currentRound >= totalRounds) {
+        if (currentRound >= totalRounds) {
+            document.getElementById('breathingInstruction').textContent = 'Complete! Well done! 🌟';
+            document.getElementById('startBreathing').style.display = 'inline-block';
+            document.getElementById('stopBreathing').style.display = 'none';
+            
+            // Show completion message
+            setTimeout(() => {
+                alert('Great job! You completed the breathing exercise. How do you feel now?');
+            }, 1000);
+        }
+        return;
+    }
+    
+    currentRound++;
+    document.getElementById('currentRound').textContent = currentRound;
+    document.getElementById('breathingProgress').style.width = `${(currentRound / totalRounds) * 100}%`;
+    
+    // Inhale phase
+    document.getElementById('breathingInstruction').textContent = 'Breathe In...';
+    document.getElementById('breathingCircle').classList.add('inhale');
+    document.getElementById('breathingCircle').classList.remove('exhale');
+    
+    breathingInterval = setTimeout(() => {
+        if (!isBreathing) return;
+        
+        // Hold phase
+        document.getElementById('breathingInstruction').textContent = 'Hold...';
+        
+        breathingInterval = setTimeout(() => {
+            if (!isBreathing) return;
+            
+            // Exhale phase
+            document.getElementById('breathingInstruction').textContent = 'Breathe Out...';
+            document.getElementById('breathingCircle').classList.add('exhale');
+            document.getElementById('breathingCircle').classList.remove('inhale');
+            
+            breathingInterval = setTimeout(() => {
+                if (!isBreathing) return;
+                
+                document.getElementById('breathingCircle').classList.remove('exhale');
+                runBreathingCycle();
+            }, 4000); // Exhale for 4 seconds
+        }, 2000); // Hold for 2 seconds
+    }, 4000); // Inhale for 4 seconds
+}
+</script>
+{% endblock %}
