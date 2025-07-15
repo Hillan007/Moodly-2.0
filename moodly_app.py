@@ -25,60 +25,67 @@ try:
 except ImportError:
     print("🚀 Loading Moodly - Emergency Fix")
 
-# SMART SERVERLESS FILE HANDLING - PROPER VERCEL SOLUTION
-# Detect serverless environment and use appropriate storage strategy
+# SMART SERVERLESS FILE HANDLING - BULLETPROOF VERCEL SOLUTION
+# Ultra-robust serverless environment detection
 IS_SERVERLESS = (
     '/var/task' in os.getcwd() or 
-    os.environ.get('VERCEL') == '1' or 
-    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
-    os.environ.get('NOW_REGION') or 
-    'LAMBDA_RUNTIME_DIR' in os.environ
+    '/var/task' in __file__ or  # Check if the file itself is in /var/task
+    os.environ.get('VERCEL') is not None or  # Any VERCEL env var
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None or 
+    os.environ.get('NOW_REGION') is not None or 
+    'LAMBDA_RUNTIME_DIR' in os.environ or
+    os.path.exists('/var/task') or  # Check if /var/task exists
+    'vercel' in os.getcwd().lower() or  # Sometimes vercel uses different paths
+    'lambda' in os.getcwd().lower()  # AWS Lambda detection
 )
 
-print(f"🔍 Environment Detection:")
+# CRITICAL FAILSAFE: Force serverless if ANY indication of serverless environment
+if not IS_SERVERLESS:
+    # Additional checks that MUST force serverless mode
+    if ('/var/task' in str(__file__) or 
+        '/var/task' in os.getcwd() or 
+        'vc__handler__python.py' in str(globals().get('__spec__', '')) or
+        os.path.exists('/var/task')):
+        print("🚨 FAILSAFE TRIGGERED: Forcing serverless mode due to /var/task detection")
+        IS_SERVERLESS = True
+
+print(f"🔍 ENHANCED Environment Detection:")
 print(f"   - Current directory: {os.getcwd()}")
-print(f"   - VERCEL env var: {os.environ.get('VERCEL')}")
-print(f"   - AWS_LAMBDA: {bool(os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))}")
+print(f"   - __file__ location: {__file__}")
+print(f"   - All environment variables: {dict(os.environ)}")
 print(f"   - Serverless detected: {IS_SERVERLESS}")
 
+# ABSOLUTE FAILSAFE: If this file is in /var/task, we are 100% serverless
+if '/var/task' in __file__:
+    print("🚨 ABSOLUTE FAILSAFE: File is in /var/task - DEFINITELY serverless")
+    IS_SERVERLESS = True
+
 if IS_SERVERLESS:
-    print("� SERVERLESS ENVIRONMENT DETECTED")
-    print("📁 Configuring /tmp storage for Vercel compatibility")
+    print("🚨 SERVERLESS ENVIRONMENT CONFIRMED")
+    print("📁 Using /tmp storage for Vercel compatibility")
     
-    # Use /tmp directory - this is writable in Vercel/serverless environments
+    # Use /tmp directory - the ONLY writable location in Vercel
     UPLOAD_FOLDER = '/tmp/uploads/profiles'
     
-    # Safely create the upload directory in /tmp (this works in Vercel!)
+    # Create /tmp directory (this WILL work in Vercel)
     try:
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        print(f"✅ Successfully created serverless upload directory: {UPLOAD_FOLDER}")
-        
-        # Test write to confirm it works
-        test_file = os.path.join(UPLOAD_FOLDER, '.test_write')
-        with open(test_file, 'w') as f:
-            f.write('test')
-        os.remove(test_file)
-        print("✅ /tmp directory write test successful")
-        
+        print(f"✅ Created serverless upload directory: {UPLOAD_FOLDER}")
     except Exception as e:
-        print(f"⚠️ Could not create upload directory: {e}")
+        print(f"❌ ERROR creating /tmp directory: {e}")
         UPLOAD_FOLDER = '/tmp'  # Fallback to /tmp root
-        print(f"📁 Using fallback directory: {UPLOAD_FOLDER}")
         
 else:
-    print("💻 LOCAL DEVELOPMENT DETECTED")
-    # Use local static folder for development
+    print("💻 LOCAL DEVELOPMENT CONFIRMED")
     UPLOAD_FOLDER = 'static/uploads/profiles'
     
-    # Create local upload directory if it doesn't exist
     try:
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         print(f"✅ Created local upload directory: {UPLOAD_FOLDER}")
     except Exception as e:
-        print(f"⚠️ Could not create local upload directory: {e}")
+        print(f"⚠️ Could not create local directory: {e}")
 
-print(f"📂 Final upload folder: {UPLOAD_FOLDER}")
-print(f"🌐 Serverless mode: {IS_SERVERLESS}")
+print(f"📂 FINAL upload folder: {UPLOAD_FOLDER}")
 
 # Load environment variables from .env file
 load_dotenv()

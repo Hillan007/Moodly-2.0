@@ -1,11 +1,11 @@
-# Deployment Version Info - PROPER VERCEL FIX
-VERSION = "2.1.0-VERCEL-TMP-STORAGE"
-DEPLOYMENT_TIMESTAMP = "2025-07-15 16:00:00"
+# Deployment Version Info - BULLETPROOF VERCEL FIX
+VERSION = "2.1.1-BULLETPROOF-FAILSAFE"
+DEPLOYMENT_TIMESTAMP = "2025-07-15 16:15:00"
 CRITICAL_FIXES = [
-    "✅ PROPER FIX: /tmp storage for Vercel compatibility",
-    "✅ Smart serverless detection and directory creation",
-    "✅ File uploads working in both local and production",
-    "✅ No more emergency blocking - proper solution implemented"
+    "🚨 BULLETPROOF: Added multiple failsafe checks for /var/task detection",
+    "✅ Enhanced serverless detection with __file__ path checking",
+    "✅ Absolute failsafe triggers if ANY serverless indicator found",
+    "✅ Fixed line 51 OSError by ensuring /tmp is always used in Vercel"
 ]
 
 # System capabilities
@@ -13,3 +13,4 @@ SERVERLESS_COMPATIBLE = True
 TMP_STORAGE_ENABLED = True
 FILE_UPLOADS_WORKING = True
 EMERGENCY_MODE = False
+FAILSAFE_ENABLED = True
