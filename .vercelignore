@@ -6,3 +6,7 @@ __pycache__/
 *.log
 .gitignore
 run_app.bat
+.vercel/
+*.pyo
+.env.local
+.write_test

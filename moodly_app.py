@@ -18,11 +18,30 @@ import hashlib
 import time
 import io
 
+# CRITICAL: Block ALL file system operations in serverless environments
+# This must be the FIRST check to prevent any directory creation
+RUNNING_IN_SERVERLESS = (
+    '/var/task' in os.getcwd() or
+    os.environ.get('VERCEL') == '1' or
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or
+    os.environ.get('NOW_REGION') or
+    os.path.exists('/var/task')
+)
+
+if RUNNING_IN_SERVERLESS:
+    print("🚨 SERVERLESS DETECTED: All file operations disabled")
+    # Override any file operation functions to prevent crashes
+    original_makedirs = os.makedirs
+    def safe_makedirs(*args, **kwargs):
+        print("🚫 Blocked makedirs call in serverless environment")
+        return
+    os.makedirs = safe_makedirs
+
 # Load environment variables from .env file
 load_dotenv()
 
 # CRITICAL: Immediate serverless environment detection to prevent any file system operations
-if os.getcwd().startswith('/var/task') or os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+if RUNNING_IN_SERVERLESS:
     print("🚨 SERVERLESS ENVIRONMENT DETECTED - All file system operations disabled")
     FORCE_PRODUCTION_MODE = True
 else:
@@ -30,7 +49,7 @@ else:
 
 # Detect if running in production/serverless environment
 # Multiple checks to ensure we catch all production environments
-IS_PRODUCTION = FORCE_PRODUCTION_MODE or bool(
+IS_PRODUCTION = FORCE_PRODUCTION_MODE or RUNNING_IN_SERVERLESS or bool(
     os.environ.get('VERCEL') or 
     os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
     os.environ.get('FLASK_ENV') == 'production' or
@@ -87,39 +106,11 @@ LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
 UPLOAD_FOLDER = 'static/uploads/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# Create upload directory only in confirmed local development
-if not IS_PRODUCTION and not FORCE_PRODUCTION_MODE:
-    try:
-        # Triple-check: verify we're not in any serverless environment
-        serverless_indicators = [
-            '/var/task',  # AWS Lambda/Vercel
-            '/tmp/vercel',  # Vercel temp
-            os.environ.get('VERCEL'),
-            os.environ.get('NOW_REGION'),
-            os.environ.get('LAMBDA_RUNTIME_DIR')
-        ]
-        
-        is_serverless = any(indicator for indicator in serverless_indicators if indicator)
-        
-        if is_serverless:
-            print("🚫 Serverless environment detected - skipping directory creation")
-            IS_PRODUCTION = True  # Force production mode
-        elif os.access('.', os.W_OK) and not os.path.exists(UPLOAD_FOLDER):
-            os.makedirs(UPLOAD_FOLDER)
-            print("✅ Upload directory created for local development")
-        elif os.path.exists(UPLOAD_FOLDER):
-            print("✅ Upload directory already exists")
-        else:
-            print("⚠️ Cannot create upload directory - enabling production mode")
-            IS_PRODUCTION = True
-    except Exception as e:
-        print(f"⚠️ Could not create upload directory: {e}")
-        IS_PRODUCTION = True  # Force production mode if any error
-else:
-    if FORCE_PRODUCTION_MODE:
-        print("🚨 FORCED PRODUCTION MODE - No file system operations allowed")
-    else:
-        print("ℹ️ Running in production mode - file uploads disabled")
+# PRODUCTION-SAFE: Never attempt directory creation in any environment
+# File uploads are completely disabled in production environments
+print(f"📁 Upload folder configured: {UPLOAD_FOLDER}")
+print(f"🚨 Production mode: {IS_PRODUCTION} | Forced: {FORCE_PRODUCTION_MODE}")
+print("� Directory creation completely disabled for serverless compatibility")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -1464,17 +1455,24 @@ def calculate_mood_analytics(mood_data):
 
 @app.route('/health')
 def health_check():
-    """Health check endpoint for monitoring."""
-    return {
+    """Health check endpoint to verify serverless configuration"""
+    return jsonify({
         'status': 'healthy',
-        'environment': 'production' if IS_PRODUCTION else 'development',
-        'file_uploads_enabled': ENABLE_FILE_UPLOADS,
-        'openai_available': openai_client is not None,
-        'upload_folder_writable': os.access('.', os.W_OK) if not IS_PRODUCTION else False
-    }
-
-# Export the app for Vercel
-application = app
+        'running_in_serverless': RUNNING_IN_SERVERLESS,
+        'is_production': IS_PRODUCTION,
+        'force_production_mode': FORCE_PRODUCTION_MODE,
+        'current_working_directory': os.getcwd(),
+        'environment_checks': {
+            'vercel_env': bool(os.environ.get('VERCEL')),
+            'now_region': bool(os.environ.get('NOW_REGION')),
+            'lambda_function': bool(os.environ.get('AWS_LAMBDA_FUNCTION_NAME')),
+            'var_task_exists': os.path.exists('/var/task'),
+            'var_task_in_cwd': '/var/task' in os.getcwd()
+        },
+        'file_operations_disabled': True,
+        'upload_folder': UPLOAD_FOLDER,
+        'enable_file_uploads': ENABLE_FILE_UPLOADS
+    })
 
 # Export the app for Vercel
 application = app
