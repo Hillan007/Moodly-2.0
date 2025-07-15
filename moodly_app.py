@@ -25,88 +25,74 @@ try:
 except ImportError:
     print("🚀 Loading Moodly - Emergency Fix")
 
-# EMERGENCY FIX: Block ALL file system operations IMMEDIATELY
-# This MUST be the absolute first code to run
-import sys
-if '/var/task' in os.getcwd() or os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
-    print("🚨 EMERGENCY SERVERLESS BLOCK: Disabling ALL file operations")
-    
-    # Override ALL potentially dangerous file operations
-    _original_makedirs = os.makedirs
-    _original_mkdir = os.mkdir  
-    _original_open = open
-    
-    def _blocked_makedirs(*args, **kwargs):
-        print(f"🚫 BLOCKED: makedirs({args}) in serverless environment")
-        return
-        
-    def _blocked_mkdir(*args, **kwargs):
-        print(f"🚫 BLOCKED: mkdir({args}) in serverless environment")
-        return
-        
-    def _safe_open(filename, mode='r', **kwargs):
-        if 'w' in mode or 'a' in mode or 'x' in mode:
-            if filename.startswith('.') or 'upload' in str(filename).lower():
-                print(f"🚫 BLOCKED: write operation to {filename} in serverless environment")
-                # Return a mock file object that does nothing
-                class MockFile:
-                    def write(self, *args): pass
-                    def close(self): pass
-                    def __enter__(self): return self
-                    def __exit__(self, *args): pass
-                return MockFile()
-        return _original_open(filename, mode, **kwargs)
-    
-    # Apply the overrides
-    os.makedirs = _blocked_makedirs
-    os.mkdir = _blocked_mkdir
-    __builtins__['open'] = _safe_open
-    
-    print("✅ File operation blocks installed successfully")
-
-# CRITICAL: Block ALL file system operations in serverless environments
-# This must be the FIRST check to prevent any directory creation
-RUNNING_IN_SERVERLESS = (
-    '/var/task' in os.getcwd() or
-    os.environ.get('VERCEL') == '1' or
-    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or
-    os.environ.get('NOW_REGION') or
-    os.path.exists('/var/task')
+# SMART SERVERLESS FILE HANDLING - PROPER VERCEL SOLUTION
+# Detect serverless environment and use appropriate storage strategy
+IS_SERVERLESS = (
+    '/var/task' in os.getcwd() or 
+    os.environ.get('VERCEL') == '1' or 
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
+    os.environ.get('NOW_REGION') or 
+    'LAMBDA_RUNTIME_DIR' in os.environ
 )
 
-if RUNNING_IN_SERVERLESS:
-    print("🚨 SERVERLESS DETECTED: All file operations disabled")
-    # Override any file operation functions to prevent crashes
-    original_makedirs = os.makedirs
-    def safe_makedirs(*args, **kwargs):
-        print("🚫 Blocked makedirs call in serverless environment")
-        return
-    os.makedirs = safe_makedirs
+print(f"🔍 Environment Detection:")
+print(f"   - Current directory: {os.getcwd()}")
+print(f"   - VERCEL env var: {os.environ.get('VERCEL')}")
+print(f"   - AWS_LAMBDA: {bool(os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))}")
+print(f"   - Serverless detected: {IS_SERVERLESS}")
+
+if IS_SERVERLESS:
+    print("� SERVERLESS ENVIRONMENT DETECTED")
+    print("📁 Configuring /tmp storage for Vercel compatibility")
+    
+    # Use /tmp directory - this is writable in Vercel/serverless environments
+    UPLOAD_FOLDER = '/tmp/uploads/profiles'
+    
+    # Safely create the upload directory in /tmp (this works in Vercel!)
+    try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        print(f"✅ Successfully created serverless upload directory: {UPLOAD_FOLDER}")
+        
+        # Test write to confirm it works
+        test_file = os.path.join(UPLOAD_FOLDER, '.test_write')
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+        print("✅ /tmp directory write test successful")
+        
+    except Exception as e:
+        print(f"⚠️ Could not create upload directory: {e}")
+        UPLOAD_FOLDER = '/tmp'  # Fallback to /tmp root
+        print(f"📁 Using fallback directory: {UPLOAD_FOLDER}")
+        
+else:
+    print("💻 LOCAL DEVELOPMENT DETECTED")
+    # Use local static folder for development
+    UPLOAD_FOLDER = 'static/uploads/profiles'
+    
+    # Create local upload directory if it doesn't exist
+    try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        print(f"✅ Created local upload directory: {UPLOAD_FOLDER}")
+    except Exception as e:
+        print(f"⚠️ Could not create local upload directory: {e}")
+
+print(f"📂 Final upload folder: {UPLOAD_FOLDER}")
+print(f"🌐 Serverless mode: {IS_SERVERLESS}")
 
 # Load environment variables from .env file
 load_dotenv()
 
-# CRITICAL: Immediate serverless environment detection to prevent any file system operations
-if RUNNING_IN_SERVERLESS:
-    print("🚨 SERVERLESS ENVIRONMENT DETECTED - All file system operations disabled")
-    FORCE_PRODUCTION_MODE = True
-else:
-    FORCE_PRODUCTION_MODE = False
-
-# Detect if running in production/serverless environment
-# Multiple checks to ensure we catch all production environments
-IS_PRODUCTION = FORCE_PRODUCTION_MODE or RUNNING_IN_SERVERLESS or bool(
-    os.environ.get('VERCEL') or 
-    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
+# Simplify production detection using the serverless detection we already have
+IS_PRODUCTION = IS_SERVERLESS or bool(
     os.environ.get('FLASK_ENV') == 'production' or
     '/var/task' in os.getcwd() or  # Vercel working directory
     '/tmp' in os.getcwd() or       # Common serverless temp directory
-    os.environ.get('NOW_REGION') or  # Vercel specific
     'lambda' in os.environ.get('AWS_EXECUTION_ENV', '').lower()
 )
 
-# Fallback check: try to write to current directory (only if not already forced)
-if not IS_PRODUCTION and not FORCE_PRODUCTION_MODE:
+# Fallback check: try to write to current directory (only if not serverless)
+if not IS_PRODUCTION and not IS_SERVERLESS:
     try:
         test_file = '.write_test'
         with open(test_file, 'w') as f:
@@ -149,20 +135,18 @@ USER_DATA = {}
 USERS_DB = {}  # In production, use a proper database
 USER_SESSIONS = {}  # Track active sessions
 LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
-UPLOAD_FOLDER = 'static/uploads/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# PRODUCTION-SAFE: Never attempt directory creation in any environment
-# File uploads are completely disabled in production environments
-print(f"📁 Upload folder configured: {UPLOAD_FOLDER}")
-print(f"🚨 Production mode: {IS_PRODUCTION} | Forced: {FORCE_PRODUCTION_MODE}")
-print("� Directory creation completely disabled for serverless compatibility")
+# Configure upload settings using the dynamic UPLOAD_FOLDER we set above
+print(f"📁 Final upload folder: {UPLOAD_FOLDER}")
+print(f"🚨 Production mode: {IS_PRODUCTION} | Serverless: {IS_SERVERLESS}")
+print("✅ Smart file handling enabled - /tmp storage for serverless, local for development")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Disable file uploads in production (recalculate after potential IS_PRODUCTION updates)
-ENABLE_FILE_UPLOADS = not IS_PRODUCTION
+# Enable file uploads in both environments now that we have proper /tmp handling
+ENABLE_FILE_UPLOADS = True
 
 def allowed_file(filename):
     """Check if uploaded file has allowed extension."""
@@ -173,19 +157,18 @@ def allowed_file(filename):
 def resize_image(image_path, max_size=(400, 400)):
     """Resize uploaded image to max dimensions while maintaining aspect ratio."""
     try:
-        # Check if we're in production - file uploads disabled
-        if IS_PRODUCTION:
-            print("⚠️ File uploads not supported in production environment")
-            return False
-            
+        # Now works in both local and serverless environments thanks to /tmp storage
+        print(f"📸 Resizing image: {image_path}")
+        
         with Image.open(image_path) as img:
             if img.mode == 'RGBA':
                 img = img.convert('RGB')
             img.thumbnail(max_size, Image.Resampling.LANCZOS)
             img.save(image_path, 'JPEG', quality=85, optimize=True)
+            print(f"✅ Image resized successfully")
             return True
     except Exception as e:
-        print(f"Error resizing image: {e}")
+        print(f"❌ Error resizing image: {e}")
         return False
 
 def generate_user_id():
