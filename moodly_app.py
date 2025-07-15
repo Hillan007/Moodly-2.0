@@ -18,6 +18,9 @@ import hashlib
 import time
 import io
 
+# Import Supabase storage helper
+from supabase_storage import supabase_storage
+
 # Force cache break with version import
 try:
     from version import VERSION, DEPLOYMENT_TIMESTAMP
@@ -62,28 +65,51 @@ if '/var/task' in __file__:
 
 if IS_SERVERLESS:
     print("🚨 SERVERLESS ENVIRONMENT CONFIRMED")
-    print("📁 Using /tmp storage for Vercel compatibility")
+    print("📁 Using Supabase cloud storage for profile pictures")
     
-    # Use /tmp directory - the ONLY writable location in Vercel
-    UPLOAD_FOLDER = '/tmp/uploads/profiles'
-    
-    # Create /tmp directory (this WILL work in Vercel)
-    try:
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        print(f"✅ Created serverless upload directory: {UPLOAD_FOLDER}")
-    except Exception as e:
-        print(f"❌ ERROR creating /tmp directory: {e}")
-        UPLOAD_FOLDER = '/tmp'  # Fallback to /tmp root
+    # In serverless, prioritize Supabase storage
+    if supabase_storage.is_enabled():
+        print("✅ Supabase storage available - using cloud storage")
+        UPLOAD_FOLDER = None  # Not needed for Supabase
+        ENABLE_FILE_UPLOADS = True
+    else:
+        print("⚠️ Supabase not configured - using /tmp fallback")
+        UPLOAD_FOLDER = '/tmp/uploads/profiles'
+        try:
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            print(f"✅ Created serverless upload directory: {UPLOAD_FOLDER}")
+        except Exception as e:
+            print(f"❌ ERROR creating /tmp directory: {e}")
+            UPLOAD_FOLDER = '/tmp'
+        ENABLE_FILE_UPLOADS = True
         
 else:
     print("💻 LOCAL DEVELOPMENT CONFIRMED")
-    UPLOAD_FOLDER = 'static/uploads/profiles'
     
-    try:
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-        print(f"✅ Created local upload directory: {UPLOAD_FOLDER}")
-    except Exception as e:
-        print(f"⚠️ Could not create local directory: {e}")
+    # In local development, offer both options
+    if supabase_storage.is_enabled():
+        print("✅ Supabase storage available - using cloud storage for consistency")
+        UPLOAD_FOLDER = None  # Not needed for Supabase
+        ENABLE_FILE_UPLOADS = True
+    else:
+        print("📁 Using local file storage for development")
+        UPLOAD_FOLDER = 'static/uploads/profiles'
+        try:
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+            print(f"✅ Created local upload directory: {UPLOAD_FOLDER}")
+        except Exception as e:
+            print(f"⚠️ Could not create local directory: {e}")
+        ENABLE_FILE_UPLOADS = True
+
+# Storage status
+if supabase_storage.is_enabled():
+    print("🌩️ CLOUD STORAGE: Using Supabase for profile pictures")
+    storage_stats = supabase_storage.get_storage_stats()
+    if storage_stats:
+        print(f"   - Bucket: {storage_stats.get('bucket')}")
+        print(f"   - Status: {storage_stats.get('status')}")
+else:
+    print(f"📂 LOCAL STORAGE: {UPLOAD_FOLDER if UPLOAD_FOLDER else 'None'}")
 
 print(f"📂 FINAL upload folder: {UPLOAD_FOLDER}")
 
@@ -144,39 +170,118 @@ USER_SESSIONS = {}  # Track active sessions
 LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# Configure upload settings using the dynamic UPLOAD_FOLDER we set above
-print(f"📁 Final upload folder: {UPLOAD_FOLDER}")
-print(f"🚨 Production mode: {IS_PRODUCTION} | Serverless: {IS_SERVERLESS}")
-print("✅ Smart file handling enabled - /tmp storage for serverless, local for development")
+# Configure upload settings
+if supabase_storage.is_enabled():
+    print("🌩️ Using Supabase cloud storage for uploads")
+    app.config['UPLOAD_FOLDER'] = None  # Not needed for cloud storage
+else:
+    print(f"📁 Using local storage: {UPLOAD_FOLDER}")
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Enable file uploads in both environments now that we have proper /tmp handling
-ENABLE_FILE_UPLOADS = True
+print(f"🚨 Production mode: {IS_PRODUCTION} | Serverless: {IS_SERVERLESS}")
+print(f"✅ File uploads enabled: {ENABLE_FILE_UPLOADS}")
+print(f"📦 Storage type: {'Supabase Cloud' if supabase_storage.is_enabled() else 'Local/Temp'}")
 
 def allowed_file(filename):
     """Check if uploaded file has allowed extension."""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# Update the resize_image function to handle production environment
-
-def resize_image(image_path, max_size=(400, 400)):
-    """Resize uploaded image to max dimensions while maintaining aspect ratio."""
-    try:
-        # Now works in both local and serverless environments thanks to /tmp storage
-        print(f"📸 Resizing image: {image_path}")
+def upload_profile_picture(file, user_id):
+    """
+    Upload profile picture using Supabase or local storage
+    
+    Args:
+        file: Uploaded file object
+        user_id: User ID for organizing files
         
-        with Image.open(image_path) as img:
-            if img.mode == 'RGBA':
-                img = img.convert('RGB')
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
-            img.save(image_path, 'JPEG', quality=85, optimize=True)
-            print(f"✅ Image resized successfully")
-            return True
+    Returns:
+        dict: Success status and file URL or error message
+    """
+    if not file or not allowed_file(file.filename):
+        return {
+            'success': False,
+            'error': 'Invalid file type. Please upload a PNG, JPG, JPEG, GIF, or WEBP image.'
+        }
+    
+    try:
+        # Get file extension
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        
+        # Use Supabase if available
+        if supabase_storage.is_enabled():
+            print(f"📤 Uploading to Supabase cloud storage...")
+            
+            # Read file data
+            file.seek(0)  # Reset file pointer
+            file_data = file.read()
+            
+            # Upload to Supabase
+            result = supabase_storage.upload_profile_picture(
+                file_data=file_data,
+                user_id=user_id,
+                file_extension=file_extension
+            )
+            
+            if result['success']:
+                return {
+                    'success': True,
+                    'file_url': result['public_url'],
+                    'storage_type': 'supabase',
+                    'filename': result['filename']
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': f"Cloud upload failed: {result['error']}"
+                }
+        
+        else:
+            # Fallback to local/temp storage
+            print(f"📁 Using local storage fallback...")
+            
+            if not UPLOAD_FOLDER:
+                return {
+                    'success': False,
+                    'error': 'No storage configured'
+                }
+            
+            # Generate secure filename
+            filename = secure_filename(f"{user_id}_profile_{int(time.time())}.{file_extension}")
+            file_path = os.path.join(UPLOAD_FOLDER, filename)
+            
+            # Save file
+            file.save(file_path)
+            
+            # Resize image
+            if resize_image(file_path):
+                # Return relative URL for local storage
+                if IS_SERVERLESS:
+                    # In serverless, files are temporary
+                    file_url = f"/tmp/uploads/profiles/{filename}"
+                else:
+                    # In local development
+                    file_url = f"/static/uploads/profiles/{filename}"
+                
+                return {
+                    'success': True,
+                    'file_url': file_url,
+                    'storage_type': 'local',
+                    'filename': filename
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to process image'
+                }
+                
     except Exception as e:
-        print(f"❌ Error resizing image: {e}")
-        return False
+        print(f"❌ Error uploading profile picture: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
 def generate_user_id():
     """Generate unique user ID."""
@@ -1332,45 +1437,38 @@ def edit_profile():
         else:
             error_message = "Bio must be 500 characters or less."
         
-        # Handle profile picture upload (only in development)
+        # Handle profile picture upload
         if ENABLE_FILE_UPLOADS and 'profile_picture' in request.files:
             file = request.files['profile_picture']
-            if file and file.filename and allowed_file(file.filename):
-                # Generate secure filename
-                timestamp = str(int(time.time()))
-                file_extension = file.filename.rsplit('.', 1)[1].lower()
-                filename = f"profile_{user['id']}_{timestamp}.{file_extension}"
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            if file and file.filename:
+                print(f"📤 Processing profile picture upload for user {user['id']}")
                 
-                try:
-                    # Save file
-                    file.save(filepath)
+                # Upload using our new unified function
+                upload_result = upload_profile_picture(file, user['id'])
+                
+                if upload_result['success']:
+                    # Delete old profile picture if it exists and we're using Supabase
+                    if user.get('profile_picture') and upload_result.get('storage_type') == 'supabase':
+                        # Extract filename from old URL if it's a Supabase URL
+                        old_pic = user['profile_picture']
+                        if 'supabase' in old_pic:
+                            # Try to extract filename from URL
+                            try:
+                                old_filename = old_pic.split('/')[-1]
+                                supabase_storage.delete_profile_picture(f"{user['id']}/{old_filename}")
+                            except:
+                                pass  # Don't fail if deletion doesn't work
                     
-                    # Resize image
-                    if resize_image(filepath):
-                        # Remove old profile picture if exists
-                        if user.get('profile_picture'):
-                            old_path = os.path.join(app.config['UPLOAD_FOLDER'], user['profile_picture'])
-                            if os.path.exists(old_path):
-                                os.remove(old_path)
-                        
-                        # Update user profile
-                        user['profile_picture'] = filename
-                        success_message = "Profile picture updated successfully!"
-                    else:
-                        # If resize failed, remove the file
-                        if os.path.exists(filepath):
-                            os.remove(filepath)
-                        error_message = "Failed to process image. Please try a different image."
-                        
-                except Exception as e:
-                    error_message = f"Error uploading image: {str(e)}"
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-            elif file and file.filename:
-                error_message = "Invalid file type. Please use JPG, PNG, GIF, or WebP images."
-        elif not ENABLE_FILE_UPLOADS and 'profile_picture' in request.files and request.files['profile_picture'].filename:
-            error_message = "Profile picture uploads are disabled in the hosted version. Please use the local version for this feature."
+                    # Update user profile with new picture URL
+                    user['profile_picture'] = upload_result['file_url']
+                    success_message = f"Profile picture updated successfully! (Using {upload_result.get('storage_type', 'unknown')} storage)"
+                    print(f"✅ Profile picture updated: {upload_result['file_url']}")
+                    
+                else:
+                    error_message = upload_result['error']
+                    print(f"❌ Profile picture upload failed: {upload_result['error']}")
+            else:
+                error_message = "Please select a valid image file."
         
         # Redirect with message
         if success_message:
@@ -1428,6 +1526,22 @@ def change_password():
                              success="Password updated successfully!")
     
     return render_template('auth/change_password.html')
+
+def resize_image(image_path, max_size=(400, 400)):
+    """Resize uploaded image to max dimensions while maintaining aspect ratio (for local storage)."""
+    try:
+        print(f"📸 Resizing local image: {image_path}")
+        
+        with Image.open(image_path) as img:
+            if img.mode == 'RGBA':
+                img = img.convert('RGB')
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            img.save(image_path, 'JPEG', quality=85, optimize=True)
+            print(f"✅ Image resized successfully")
+            return True
+    except Exception as e:
+        print(f"❌ Error resizing image: {e}")
+        return False
 
 # Add this helper function after your existing helper functions
 
@@ -1519,6 +1633,34 @@ def inject_user():
     """Make get_current_user available in all templates."""
     return dict(get_current_user=get_current_user)
 
-if __name__ == '__main__':
-    # For local development
-    app.run(debug=True, host='127.0.0.1', port=5000)
+@app.route('/api/storage/status')
+def storage_status():
+    """API endpoint to check storage status"""
+    return jsonify({
+        'supabase_enabled': supabase_storage.is_enabled(),
+        'upload_folder': UPLOAD_FOLDER,
+        'enable_file_uploads': ENABLE_FILE_UPLOADS,
+        'is_serverless': IS_SERVERLESS,
+        'storage_type': 'supabase' if supabase_storage.is_enabled() else 'local',
+        'supabase_stats': supabase_storage.get_storage_stats() if supabase_storage.is_enabled() else None
+    })
+
+@app.route('/api/upload/test', methods=['POST'])
+@login_required
+def test_upload():
+    """Test upload endpoint for debugging"""
+    user = get_current_user()
+    if not user:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Test upload
+    result = upload_profile_picture(file, user['id'])
+    
+    return jsonify(result)

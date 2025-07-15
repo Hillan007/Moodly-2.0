@@ -1,16 +1,19 @@
-# Deployment Version Info - BULLETPROOF VERCEL FIX
-VERSION = "2.1.1-BULLETPROOF-FAILSAFE"
-DEPLOYMENT_TIMESTAMP = "2025-07-15 16:15:00"
+# Deployment Version Info - SUPABASE CLOUD STORAGE
+VERSION = "2.2.0-SUPABASE-STORAGE"
+DEPLOYMENT_TIMESTAMP = "2025-07-15 16:30:00"
 CRITICAL_FIXES = [
-    "🚨 BULLETPROOF: Added multiple failsafe checks for /var/task detection",
-    "✅ Enhanced serverless detection with __file__ path checking",
-    "✅ Absolute failsafe triggers if ANY serverless indicator found",
-    "✅ Fixed line 51 OSError by ensuring /tmp is always used in Vercel"
+    "🌩️ NEW: Supabase cloud storage integration for profile pictures",
+    "✅ Permanent file storage that works in Vercel serverless",
+    "✅ Automatic image resizing and optimization",
+    "✅ Fallback to local/temp storage if Supabase unavailable",
+    "✅ Works in both development and production environments"
 ]
 
 # System capabilities
 SERVERLESS_COMPATIBLE = True
+CLOUD_STORAGE_ENABLED = True
 TMP_STORAGE_ENABLED = True
 FILE_UPLOADS_WORKING = True
 EMERGENCY_MODE = False
 FAILSAFE_ENABLED = True
+SUPABASE_INTEGRATED = True
