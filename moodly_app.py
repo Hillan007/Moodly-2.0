@@ -21,9 +21,16 @@ import io
 # Load environment variables from .env file
 load_dotenv()
 
+# CRITICAL: Immediate serverless environment detection to prevent any file system operations
+if os.getcwd().startswith('/var/task') or os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+    print("🚨 SERVERLESS ENVIRONMENT DETECTED - All file system operations disabled")
+    FORCE_PRODUCTION_MODE = True
+else:
+    FORCE_PRODUCTION_MODE = False
+
 # Detect if running in production/serverless environment
 # Multiple checks to ensure we catch all production environments
-IS_PRODUCTION = bool(
+IS_PRODUCTION = FORCE_PRODUCTION_MODE or bool(
     os.environ.get('VERCEL') or 
     os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
     os.environ.get('FLASK_ENV') == 'production' or
@@ -33,8 +40,8 @@ IS_PRODUCTION = bool(
     'lambda' in os.environ.get('AWS_EXECUTION_ENV', '').lower()
 )
 
-# Fallback check: try to write to current directory
-if not IS_PRODUCTION:
+# Fallback check: try to write to current directory (only if not already forced)
+if not IS_PRODUCTION and not FORCE_PRODUCTION_MODE:
     try:
         test_file = '.write_test'
         with open(test_file, 'w') as f:
@@ -80,23 +87,39 @@ LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
 UPLOAD_FOLDER = 'static/uploads/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# Create upload directory only in local development
-if not IS_PRODUCTION:
+# Create upload directory only in confirmed local development
+if not IS_PRODUCTION and not FORCE_PRODUCTION_MODE:
     try:
-        # Double-check we can write before attempting mkdir
-        if os.access('.', os.W_OK) and not os.path.exists(UPLOAD_FOLDER):
+        # Triple-check: verify we're not in any serverless environment
+        serverless_indicators = [
+            '/var/task',  # AWS Lambda/Vercel
+            '/tmp/vercel',  # Vercel temp
+            os.environ.get('VERCEL'),
+            os.environ.get('NOW_REGION'),
+            os.environ.get('LAMBDA_RUNTIME_DIR')
+        ]
+        
+        is_serverless = any(indicator for indicator in serverless_indicators if indicator)
+        
+        if is_serverless:
+            print("🚫 Serverless environment detected - skipping directory creation")
+            IS_PRODUCTION = True  # Force production mode
+        elif os.access('.', os.W_OK) and not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
             print("✅ Upload directory created for local development")
         elif os.path.exists(UPLOAD_FOLDER):
             print("✅ Upload directory already exists")
         else:
-            print("⚠️ Cannot create upload directory - switching to production mode")
+            print("⚠️ Cannot create upload directory - enabling production mode")
             IS_PRODUCTION = True
     except Exception as e:
         print(f"⚠️ Could not create upload directory: {e}")
         IS_PRODUCTION = True  # Force production mode if any error
 else:
-    print("ℹ️ Running in production mode - file uploads disabled")
+    if FORCE_PRODUCTION_MODE:
+        print("🚨 FORCED PRODUCTION MODE - No file system operations allowed")
+    else:
+        print("ℹ️ Running in production mode - file uploads disabled")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
