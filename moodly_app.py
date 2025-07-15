@@ -22,7 +22,14 @@ import io
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+
+# Configure secret key for sessions
+if os.environ.get('VERCEL'):
+    # In production, use a consistent secret key
+    app.secret_key = os.environ.get('SECRET_KEY', 'moodly-prod-secret-key-2025')
+else:
+    # In development, use environment variable or fallback
+    app.secret_key = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
 
 # Configure OpenAI client
 openai_client = None
@@ -31,6 +38,10 @@ try:
         from openai import OpenAI
         openai_client = OpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
         print("✅ OpenAI client initialized successfully!")
+    else:
+        print("ℹ️ OpenAI API key not found. App will work with fallback features.")
+except ImportError:
+    print("⚠️ OpenAI library not available. App will work with fallback features.")
 except Exception as e:
     print(f"⚠️ OpenAI client initialization error: {e}")
     print("App will continue with fallback prompts.")
@@ -46,12 +57,15 @@ LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
 UPLOAD_FOLDER = 'static/uploads/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# Create upload directory if it doesn't exist
-if not os.path.exists(UPLOAD_FOLDER):
+# Create upload directory if it doesn't exist (only in local development)
+if not os.environ.get('VERCEL') and not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Disable file uploads in production (Vercel)
+ENABLE_FILE_UPLOADS = not os.environ.get('VERCEL', False)
 
 def allowed_file(filename):
     """Check if uploaded file has allowed extension."""
@@ -62,8 +76,8 @@ def allowed_file(filename):
 def resize_image(image_path, max_size=(400, 400)):
     """Resize uploaded image to max dimensions while maintaining aspect ratio."""
     try:
-        # Check if we're in production (Vercel)
-        if os.environ.get('VERCEL'):
+        # Check if we're in production (Vercel) - file uploads disabled
+        if os.environ.get('VERCEL') or not ENABLE_FILE_UPLOADS:
             print("⚠️ File uploads not supported in production environment")
             return False
             
@@ -1231,8 +1245,8 @@ def edit_profile():
         else:
             error_message = "Bio must be 500 characters or less."
         
-        # Handle profile picture upload
-        if 'profile_picture' in request.files:
+        # Handle profile picture upload (only in development)
+        if ENABLE_FILE_UPLOADS and 'profile_picture' in request.files:
             file = request.files['profile_picture']
             if file and file.filename and allowed_file(file.filename):
                 # Generate secure filename
@@ -1268,6 +1282,8 @@ def edit_profile():
                         os.remove(filepath)
             elif file and file.filename:
                 error_message = "Invalid file type. Please use JPG, PNG, GIF, or WebP images."
+        elif not ENABLE_FILE_UPLOADS and 'profile_picture' in request.files and request.files['profile_picture'].filename:
+            error_message = "Profile picture uploads are disabled in the hosted version. Please use the local version for this feature."
         
         # Redirect with message
         if success_message:
@@ -1386,6 +1402,19 @@ def calculate_mood_analytics(mood_data):
         'weekly_average': total_entries / max(len(set([entry['date'][:7] for entry in mood_data])), 1)
     }
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring."""
+    return {
+        'status': 'healthy',
+        'environment': 'production' if os.environ.get('VERCEL') else 'development',
+        'file_uploads_enabled': ENABLE_FILE_UPLOADS,
+        'openai_available': openai_client is not None
+    }
+
+# Export the app for Vercel
+application = app
+
 # Export the app for Vercel
 application = app
 
@@ -1397,6 +1426,3 @@ def inject_user():
 if __name__ == '__main__':
     # For local development
     app.run(debug=True, host='127.0.0.1', port=5000)
-else:
-    # For production (Vercel)
-    app.run(debug=False)

@@ -45,9 +45,17 @@
                                         <label for="profile_picture" class="form-label">
                                             <i class="fas fa-camera"></i> Profile Picture
                                         </label>
-                                        <input type="file" class="form-control" id="profile_picture" name="profile_picture" 
-                                               accept="image/*">
-                                        <div class="form-text">Choose a JPG, PNG, or GIF image (max 16MB)</div>
+                                        {% if not request.environ.get('VERCEL') %}
+                                            <input type="file" class="form-control" id="profile_picture" name="profile_picture" 
+                                                   accept="image/*">
+                                            <div class="form-text">Choose a JPG, PNG, or GIF image (max 16MB)</div>
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Profile picture uploads are disabled in the hosted version. 
+                                                Download and run locally to use this feature.
+                                            </div>
+                                        {% endif %}
                                     </div>
                                     
                                     <!-- Bio -->
