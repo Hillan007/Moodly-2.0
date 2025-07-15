@@ -65,6 +65,11 @@ class SupabaseStorage:
             # Resize image before upload
             resized_image_bytes = self._resize_image(file_bytes)
             
+            # Ensure we have valid bytes
+            if not isinstance(resized_image_bytes, bytes):
+                print(f"⚠️ Resize returned non-bytes: {type(resized_image_bytes)}, using original")
+                resized_image_bytes = file_bytes
+            
             # Upload to Supabase Storage
             result = self.client.storage.from_(self.bucket_name).upload(
                 file=resized_image_bytes,
