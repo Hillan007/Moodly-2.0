@@ -22,12 +22,27 @@ import io
 load_dotenv()
 
 # Detect if running in production/serverless environment
-IS_PRODUCTION = (
+# Multiple checks to ensure we catch all production environments
+IS_PRODUCTION = bool(
     os.environ.get('VERCEL') or 
     os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
     os.environ.get('FLASK_ENV') == 'production' or
-    not os.access('.', os.W_OK)  # Check if current directory is writable
+    '/var/task' in os.getcwd() or  # Vercel working directory
+    '/tmp' in os.getcwd() or       # Common serverless temp directory
+    os.environ.get('NOW_REGION') or  # Vercel specific
+    'lambda' in os.environ.get('AWS_EXECUTION_ENV', '').lower()
 )
+
+# Fallback check: try to write to current directory
+if not IS_PRODUCTION:
+    try:
+        test_file = '.write_test'
+        with open(test_file, 'w') as f:
+            f.write('test')
+        os.remove(test_file)
+    except (OSError, PermissionError):
+        IS_PRODUCTION = True
+        print("ℹ️ Detected read-only environment - switching to production mode")
 
 app = Flask(__name__)
 
@@ -68,18 +83,25 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 # Create upload directory only in local development
 if not IS_PRODUCTION:
     try:
-        if not os.path.exists(UPLOAD_FOLDER):
+        # Double-check we can write before attempting mkdir
+        if os.access('.', os.W_OK) and not os.path.exists(UPLOAD_FOLDER):
             os.makedirs(UPLOAD_FOLDER)
-        print("✅ Upload directory created for local development")
+            print("✅ Upload directory created for local development")
+        elif os.path.exists(UPLOAD_FOLDER):
+            print("✅ Upload directory already exists")
+        else:
+            print("⚠️ Cannot create upload directory - switching to production mode")
+            IS_PRODUCTION = True
     except Exception as e:
         print(f"⚠️ Could not create upload directory: {e}")
+        IS_PRODUCTION = True  # Force production mode if any error
 else:
     print("ℹ️ Running in production mode - file uploads disabled")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Disable file uploads in production (Vercel)
+# Disable file uploads in production (recalculate after potential IS_PRODUCTION updates)
 ENABLE_FILE_UPLOADS = not IS_PRODUCTION
 
 def allowed_file(filename):
