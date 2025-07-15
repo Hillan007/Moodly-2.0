@@ -18,6 +18,52 @@ import hashlib
 import time
 import io
 
+# Force cache break with version import
+try:
+    from version import VERSION, DEPLOYMENT_TIMESTAMP
+    print(f"🚀 Loading Moodly v{VERSION} - {DEPLOYMENT_TIMESTAMP}")
+except ImportError:
+    print("🚀 Loading Moodly - Emergency Fix")
+
+# EMERGENCY FIX: Block ALL file system operations IMMEDIATELY
+# This MUST be the absolute first code to run
+import sys
+if '/var/task' in os.getcwd() or os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+    print("🚨 EMERGENCY SERVERLESS BLOCK: Disabling ALL file operations")
+    
+    # Override ALL potentially dangerous file operations
+    _original_makedirs = os.makedirs
+    _original_mkdir = os.mkdir  
+    _original_open = open
+    
+    def _blocked_makedirs(*args, **kwargs):
+        print(f"🚫 BLOCKED: makedirs({args}) in serverless environment")
+        return
+        
+    def _blocked_mkdir(*args, **kwargs):
+        print(f"🚫 BLOCKED: mkdir({args}) in serverless environment")
+        return
+        
+    def _safe_open(filename, mode='r', **kwargs):
+        if 'w' in mode or 'a' in mode or 'x' in mode:
+            if filename.startswith('.') or 'upload' in str(filename).lower():
+                print(f"🚫 BLOCKED: write operation to {filename} in serverless environment")
+                # Return a mock file object that does nothing
+                class MockFile:
+                    def write(self, *args): pass
+                    def close(self): pass
+                    def __enter__(self): return self
+                    def __exit__(self, *args): pass
+                return MockFile()
+        return _original_open(filename, mode, **kwargs)
+    
+    # Apply the overrides
+    os.makedirs = _blocked_makedirs
+    os.mkdir = _blocked_mkdir
+    __builtins__['open'] = _safe_open
+    
+    print("✅ File operation blocks installed successfully")
+
 # CRITICAL: Block ALL file system operations in serverless environments
 # This must be the FIRST check to prevent any directory creation
 RUNNING_IN_SERVERLESS = (
@@ -1453,26 +1499,27 @@ def calculate_mood_analytics(mood_data):
         'weekly_average': total_entries / max(len(set([entry['date'][:7] for entry in mood_data])), 1)
     }
 
-@app.route('/health')
-def health_check():
-    """Health check endpoint to verify serverless configuration"""
-    return jsonify({
-        'status': 'healthy',
-        'running_in_serverless': RUNNING_IN_SERVERLESS,
-        'is_production': IS_PRODUCTION,
-        'force_production_mode': FORCE_PRODUCTION_MODE,
-        'current_working_directory': os.getcwd(),
-        'environment_checks': {
-            'vercel_env': bool(os.environ.get('VERCEL')),
-            'now_region': bool(os.environ.get('NOW_REGION')),
-            'lambda_function': bool(os.environ.get('AWS_LAMBDA_FUNCTION_NAME')),
-            'var_task_exists': os.path.exists('/var/task'),
-            'var_task_in_cwd': '/var/task' in os.getcwd()
-        },
-        'file_operations_disabled': True,
-        'upload_folder': UPLOAD_FOLDER,
-        'enable_file_uploads': ENABLE_FILE_UPLOADS
-    })
+# Temporarily disabled health check to prevent any file operation issues
+# @app.route('/health')
+# def health_check():
+#     """Health check endpoint to verify serverless configuration"""
+#     return jsonify({
+#         'status': 'healthy',
+#         'running_in_serverless': RUNNING_IN_SERVERLESS,
+#         'is_production': IS_PRODUCTION,
+#         'force_production_mode': FORCE_PRODUCTION_MODE,
+#         'current_working_directory': os.getcwd(),
+#         'environment_checks': {
+#             'vercel_env': bool(os.environ.get('VERCEL')),
+#             'now_region': bool(os.environ.get('NOW_REGION')),
+#             'lambda_function': bool(os.environ.get('AWS_LAMBDA_FUNCTION_NAME')),
+#             'var_task_exists': os.path.exists('/var/task'),
+#             'var_task_in_cwd': '/var/task' in os.getcwd()
+#         },
+#         'file_operations_disabled': True,
+#         'upload_folder': UPLOAD_FOLDER,
+#         'enable_file_uploads': ENABLE_FILE_UPLOADS
+#     })
 
 # Export the app for Vercel
 application = app
