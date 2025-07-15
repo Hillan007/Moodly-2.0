@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - Moodly{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="container-main">
+        <div class="text-center mb-4">
+            <h2><i class="fas fa-user-plus text-primary"></i> Join Moodly</h2>
+            <p class="lead">Create your account to start your emotional wellness journey! (Ages 14-29)</p>
+        </div>
+
+        {% if errors %}
+            <div class="alert alert-danger">
+                <ul class="mb-0">
+                    {% for error in errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form method="POST" class="needs-validation" novalidate>
+                    <div class="mb-3">
+                        <label for="username" class="form-label">
+                            <i class="fas fa-user"></i> Username
+                        </label>
+                        <input type="text" class="form-control" id="username" name="username" 
+                               required minlength="3" placeholder="Choose a fun username"
+                               value="{{ username or '' }}">
+                        <div class="form-text">This will be your display name (3+ characters, letters, numbers, _, - only)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <i class="fas fa-envelope"></i> Email
+                        </label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               required placeholder="your.email@example.com"
+                               value="{{ email or '' }}">
+                        <div class="form-text">We'll keep your email private and safe</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="age" class="form-label">
+                            <i class="fas fa-birthday-cake"></i> Age
+                        </label>
+                        <select class="form-select" id="age" name="age" required>
+                            <option value="">Select your age</option>
+                            {% for age_option in range(14, 30) %}
+                                <option value="{{ age_option }}" {% if age and age|int == age_option %}selected{% endif %}>
+                                    {{ age_option }} years old
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               required minlength="6" placeholder="Create a secure password">
+                        <div class="form-text">At least 6 characters with letters and numbers</div>
+                        
+                        <!-- Password strength indicator -->
+                        <div class="password-strength mt-2" style="display: none;">
+                            <small class="text-muted">Password strength:</small>
+                            <div class="progress" style="height: 5px;">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="confirm_password" class="form-label">
+                            <i class="fas fa-lock"></i> Confirm Password
+                        </label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                               required placeholder="Type your password again">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus"></i> Create My Account
+                        </button>
+                    </div>
+                </form>
+
+                <div class="text-center mt-4">
+                    <p>Already have an account? 
+                        <a href="{{ url_for('login') }}" class="text-decoration-none">
+                            <i class="fas fa-sign-in-alt"></i> Sign In
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Password strength checker
+document.getElementById('password').addEventListener('input', function() {
+    const password = this.value;
+    const strengthDiv = document.querySelector('.password-strength');
+    const progressBar = document.querySelector('.progress-bar');
+    
+    if (password.length > 0) {
+        strengthDiv.style.display = 'block';
+        
+        let strength = 0;
+        let strengthText = 'Weak';
+        let strengthColor = 'bg-danger';
+        
+        // Check length
+        if (password.length >= 6) strength += 25;
+        if (password.length >= 8) strength += 15;
+        
+        // Check for letters
+        if (/[a-zA-Z]/.test(password)) strength += 25;
+        
+        // Check for numbers
+        if (/\d/.test(password)) strength += 25;
+        
+        // Check for special characters
+        if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 10;
+        
+        if (strength >= 70) {
+            strengthText = 'Strong';
+            strengthColor = 'bg-success';
+        } else if (strength >= 50) {
+            strengthText = 'Good';
+            strengthColor = 'bg-warning';
+        }
+        
+        progressBar.className = `progress-bar ${strengthColor}`;
+        progressBar.style.width = strength + '%';
+        progressBar.textContent = strengthText;
+    } else {
+        strengthDiv.style.display = 'none';
+    }
+});
+
+// Password confirmation validation
+document.getElementById('confirm_password').addEventListener('input', function() {
+    const password = document.getElementById('password').value;
+    const confirmPassword = this.value;
+    
+    if (confirmPassword.length > 0) {
+        if (password === confirmPassword) {
+            this.classList.remove('is-invalid');
+            this.classList.add('is-valid');
+        } else {
+            this.classList.remove('is-valid');
+            this.classList.add('is-invalid');
+        }
+    } else {
+        this.classList.remove('is-valid', 'is-invalid');
+    }
+});
+</script>
+{% endblock %}

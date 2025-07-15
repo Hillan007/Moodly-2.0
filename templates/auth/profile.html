@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - Moodly{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="container-main">
+        <div class="row">
+            <div class="col-md-4">
+                <!-- Profile Card -->
+                <div class="card">
+                    <div class="card-body text-center">
+                        {% if user.profile_picture %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_picture) }}" 
+                                 alt="Profile Picture" class="rounded-circle mb-3" width="120" height="120">
+                        {% else %}
+                            <i class="fas fa-user-circle fa-5x text-muted mb-3"></i>
+                        {% endif %}
+                        
+                        <h5>{{ user.username }}</h5>
+                        <p class="text-muted">{{ user.age }} years old</p>
+                        
+                        {% if user.bio %}
+                            <p class="small">{{ user.bio }}</p>
+                        {% else %}
+                            <p class="small text-muted">No bio added yet</p>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('edit_profile') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit"></i> Edit Profile
+                        </a>
+                        <a href="{{ url_for('change_password') }}" class="btn btn-outline-secondary btn-sm mt-2">
+                            <i class="fas fa-key"></i> Change Password
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Stats Card -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-chart-bar"></i> Your Stats</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <h4 class="text-primary">{{ total_entries }}</h4>
+                                <small>Journal Entries</small>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-success">{{ user.mood_streak or 0 }}</h4>
+                                <small>Day Streak</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <!-- Recent Entries -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-book"></i> Recent Journal Entries</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_entries %}
+                            {% for entry in recent_entries %}
+                                <div class="border-bottom pb-3 mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <h6>{{ entry.date }}</h6>
+                                        <span class="badge bg-primary">{{ entry.mood_key|title }}</span>
+                                    </div>
+                                    <p class="text-truncate">{{ entry.content[:100] }}...</p>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="fas fa-edit fa-3x mb-3"></i>
+                                <p>No journal entries yet!</p>
+                                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                                    Start Journaling
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Mood Distribution -->
+                {% if mood_counts %}
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6><i class="fas fa-pie-chart"></i> Your Mood Distribution</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for mood, count in mood_counts.items() %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>{{ mood|title }}</span>
+                                        <strong>{{ count }}</strong>
+                                    </div>
+                                    <div class="progress">
+                                        <div class="progress-bar" 
+                                             role="progressbar" 
+                                             style="width: {{ (count / total_entries * 100)|round(1) }}%"
+                                             aria-valuenow="{{ count }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ total_entries }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

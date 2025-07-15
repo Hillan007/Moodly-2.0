@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Profile Setup - Moodly{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="container-main">
+        <div class="text-center mb-4">
+            <h2><i class="fas fa-user-cog text-primary"></i> Welcome to Moodly!</h2>
+            <p class="lead">Let's set up your profile to personalize your experience</p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-heart text-danger"></i> 
+                            Hi {{ user.username }}! You're all set to start your wellness journey!
+                        </h5>
+                        
+                        <p>Your account has been created successfully. Here's what you can do now:</p>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-edit fa-3x mb-3"></i>
+                                        <h6>Start Journaling</h6>
+                                        <p class="small">Track your mood and reflect on your day</p>
+                                        <a href="{{ url_for('index') }}" class="btn btn-light btn-sm">
+                                            <i class="fas fa-play"></i> Begin Now
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: linear-gradient(135deg, #f093fb, #f5576c); color: white; border: none;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-user-edit fa-3x mb-3"></i>
+                                        <h6>Complete Your Profile</h6>
+                                        <p class="small">Add a profile picture and bio</p>
+                                        <a href="{{ url_for('edit_profile') }}" class="btn btn-light btn-sm">
+                                            <i class="fas fa-camera"></i> Add Photo
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white; border: none;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-spa fa-3x mb-3"></i>
+                                        <h6>Explore Wellness Tools</h6>
+                                        <p class="small">Try breathing exercises and coping strategies</p>
+                                        <a href="{{ url_for('wellness_hub') }}" class="btn btn-light btn-sm">
+                                            <i class="fas fa-leaf"></i> Explore
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100" style="background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; border: none;">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-chart-line fa-3x mb-3"></i>
+                                        <h6>Track Your Progress</h6>
+                                        <p class="small">See your mood patterns and achievements</p>
+                                        <a href="{{ url_for('mood_tracker') }}" class="btn btn-light btn-sm">
+                                            <i class="fas fa-chart-bar"></i> View Stats
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <h6><i class="fas fa-shield-alt text-success"></i> Your Privacy is Protected</h6>
+                            <p class="text-muted small">Your personal information and journal entries are private and secure. We never share your data.</p>
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('index') }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-rocket"></i> Start My Wellness Journey
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.container-main {
+    padding: 2rem 0;
+}
+</style>
+{% endblock %}

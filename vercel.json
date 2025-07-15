@@ -2,18 +2,17 @@
   "version": 2,
   "builds": [
     {
-      "src": "index.py",
+      "src": "moodly_app.py",
       "use": "@vercel/python"
     }
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/static/$1"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/index.py"
+      "dest": "moodly_app.py"
     }
-  ]
+  ],
+  "env": {
+    "FLASK_ENV": "production"
+  }
 }

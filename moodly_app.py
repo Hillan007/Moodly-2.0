@@ -5,6 +5,7 @@ import datetime
 from datetime import date, timedelta
 # from openai import OpenAI  # Temporarily disabled
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import uuid
 from dotenv import load_dotenv
 import requests
@@ -12,6 +13,10 @@ import base64
 import random
 import statistics
 from collections import defaultdict, Counter
+from PIL import Image
+import hashlib
+import time
+import io
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,6 +38,103 @@ except Exception as e:
 # Data storage (in production, use a proper database)
 JOURNAL_ENTRIES = {}
 USER_DATA = {}
+
+# User authentication and profile system
+USERS_DB = {}  # In production, use a proper database
+USER_SESSIONS = {}  # Track active sessions
+LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
+UPLOAD_FOLDER = 'static/uploads/profiles'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+# Create upload directory if it doesn't exist
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+def allowed_file(filename):
+    """Check if uploaded file has allowed extension."""
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+# Update the resize_image function to handle production environment
+
+def resize_image(image_path, max_size=(400, 400)):
+    """Resize uploaded image to max dimensions while maintaining aspect ratio."""
+    try:
+        # Check if we're in production (Vercel)
+        if os.environ.get('VERCEL'):
+            print("⚠️ File uploads not supported in production environment")
+            return False
+            
+        with Image.open(image_path) as img:
+            if img.mode == 'RGBA':
+                img = img.convert('RGB')
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            img.save(image_path, 'JPEG', quality=85, optimize=True)
+            return True
+    except Exception as e:
+        print(f"Error resizing image: {e}")
+        return False
+
+def generate_user_id():
+    """Generate unique user ID."""
+    return str(uuid.uuid4())
+
+def hash_password(password):
+    """Hash password with salt."""
+    salt = os.urandom(32)
+    pwdhash = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 100000)
+    return salt + pwdhash
+
+def verify_password(stored_password, provided_password):
+    """Verify provided password against stored hash."""
+    salt = stored_password[:32]
+    stored_hash = stored_password[32:]
+    pwdhash = hashlib.pbkdf2_hmac('sha256', provided_password.encode('utf-8'), salt, 100000)
+    return pwdhash == stored_hash
+
+def login_required(f):
+    """Decorator to require login for protected routes."""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    """Get current logged-in user data."""
+    if 'user_id' in session:
+        return USERS_DB.get(session['user_id'])
+    return None
+
+def check_rate_limit(identifier, max_attempts=5, window_minutes=15):
+    """Check if user has exceeded login attempt rate limit."""
+    now = datetime.datetime.now()
+    if identifier not in LOGIN_ATTEMPTS:
+        LOGIN_ATTEMPTS[identifier] = []
+    
+    # Remove old attempts outside the window
+    LOGIN_ATTEMPTS[identifier] = [
+        attempt for attempt in LOGIN_ATTEMPTS[identifier]
+        if (now - attempt).total_seconds() < window_minutes * 60
+    ]
+    
+    return len(LOGIN_ATTEMPTS[identifier]) < max_attempts
+
+def record_failed_login(identifier):
+    """Record a failed login attempt."""
+    now = datetime.datetime.now()
+    if identifier not in LOGIN_ATTEMPTS:
+        LOGIN_ATTEMPTS[identifier] = []
+    LOGIN_ATTEMPTS[identifier].append(now)
+
+def clear_failed_logins(identifier):
+    """Clear failed login attempts for successful login."""
+    if identifier in LOGIN_ATTEMPTS:
+        del LOGIN_ATTEMPTS[identifier]
 
 # Achievement system
 ACHIEVEMENTS = {
@@ -474,18 +576,43 @@ def index():
 
 @app.route('/mood/<mood_key>')
 def mood_selected(mood_key):
+    """Handle mood selection and show journaling interface."""
     if mood_key not in MOODS:
         return redirect(url_for('index'))
     
     mood_info = MOODS[mood_key]
-    prompt = get_ai_prompt(mood_key, mood_info)
-    songs = get_mood_songs(mood_key, limit=5)
+    
+    # Check if user is logged in
+    user = get_current_user()
+    if user:
+        # For logged-in users, store in their personal data
+        if 'current_mood' not in session:
+            session['current_mood'] = {}
+        session['current_mood'] = {
+            'key': mood_key,
+            'info': mood_info,
+            'user_id': user['id']
+        }
+    else:
+        # For anonymous users, store in session only
+        session['current_mood'] = {
+            'key': mood_key,
+            'info': mood_info,
+            'user_id': None
+        }
+    
+    # Get AI-powered or fallback prompt
+    ai_prompt = get_ai_prompt(mood_key, mood_info)
+    
+    # Get mood-appropriate music
+    songs = get_mood_songs(mood_key)
     
     return render_template('journal.html', 
                          mood=mood_info, 
                          mood_key=mood_key,
-                         prompt=prompt,
-                         songs=songs)
+                         ai_prompt=ai_prompt,
+                         songs=songs,
+                         user=user)
 
 @app.route('/submit_entry', methods=['POST'])
 def submit_entry():
@@ -729,16 +856,51 @@ def wellness_hub():
                          achievement_details=ACHIEVEMENTS)
 
 @app.route('/analytics')
-def analytics_page():
-    """Detailed analytics page"""
-    user_id = get_user_id()
-    analytics = get_mood_analytics(user_id)
-    patterns = predict_mood_patterns(user_id)
+def analytics():
+    """Analytics dashboard page."""
+    user = get_current_user()
+    
+    # Get mood data for analytics
+    if user:
+        user_entries = JOURNAL_ENTRIES.get(user['id'], [])
+    else:
+        user_entries = session.get('journal_entries', [])
+    
+    # Calculate analytics
+    mood_data = []
+    for entry in user_entries:
+        mood_data.append({
+            'date': entry['date'],
+            'mood_key': entry['mood_key'],
+            'mood_info': MOODS[entry['mood_key']],
+            'timestamp': entry['timestamp']
+        })
+    
+    # Calculate streaks and patterns
+    analytics_data = calculate_mood_analytics(mood_data)
     
     return render_template('analytics.html', 
-                         analytics=analytics,
-                         patterns=patterns,
-                         moods=MOODS)
+                         mood_data=mood_data,
+                         analytics=analytics_data,
+                         user=user)
+
+@app.route('/api/analytics')
+def analytics_api():
+    """API endpoint for analytics data."""
+    user = get_current_user()
+    
+    if user:
+        user_entries = JOURNAL_ENTRIES.get(user['id'], [])
+    else:
+        user_entries = session.get('journal_entries', [])
+    
+    # Prepare data for charts
+    mood_counts = Counter([entry['mood_key'] for entry in user_entries])
+    
+    return jsonify({
+        'mood_counts': dict(mood_counts),
+        'total_entries': len(user_entries)
+    })
 
 @app.route('/templates')
 def journal_templates():
@@ -797,17 +959,7 @@ def check_achievements_api():
         ]
     })
 
-@app.route('/api/analytics')
-def analytics_api():
-    """API endpoint for analytics data"""
-    user_id = get_user_id()
-    analytics = get_mood_analytics(user_id)
-    patterns = predict_mood_patterns(user_id)
-    
-    return jsonify({
-        'analytics': analytics,
-        'patterns': patterns
-    })
+
 
 @app.route('/api/coping/<mood_key>')
 def coping_api(mood_key):
@@ -869,5 +1021,382 @@ def submit_template_entry():
         ]
     })
 
+# User authentication routes
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    """User registration page."""
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        age = request.form.get('age', '')
+        
+        # Validation
+        errors = []
+        
+        if len(username) < 3:
+            errors.append("Username must be at least 3 characters long")
+        
+        # Enhanced username validation
+        if not username.replace('_', '').replace('-', '').isalnum():
+            errors.append("Username can only contain letters, numbers, underscores, and hyphens")
+        
+        if '@' not in email or '.' not in email.split('@')[1]:
+            errors.append("Please enter a valid email address")
+        
+        # Enhanced password validation
+        if len(password) < 6:
+            errors.append("Password must be at least 6 characters long")
+        
+        # Check for password strength
+        has_letter = any(c.isalpha() for c in password)
+        has_number = any(c.isdigit() for c in password)
+        
+        if not has_letter:
+            errors.append("Password must contain at least one letter")
+        
+        if not has_number:
+            errors.append("Password must contain at least one number")
+        
+        if password != confirm_password:
+            errors.append("Passwords do not match")
+        
+        try:
+            age_int = int(age)
+            if age_int < 14 or age_int > 29:
+                errors.append("Age must be between 14 and 29")
+        except ValueError:
+            errors.append("Please enter a valid age")
+        
+        # Check if username or email already exists
+        for user_data in USERS_DB.values():
+            if user_data['username'].lower() == username.lower():
+                errors.append("Username already exists")
+            if user_data['email'].lower() == email.lower():
+                errors.append("Email already registered")
+        
+        if errors:
+            return render_template('auth/signup.html', errors=errors, 
+                                 username=username, email=email, age=age)
+        
+        # Create new user
+        user_id = generate_user_id()
+        USERS_DB[user_id] = {
+            'id': user_id,
+            'username': username,
+            'email': email,
+            'password': hash_password(password),
+            'age': int(age),
+            'profile_picture': None,
+            'bio': '',
+            'created_at': datetime.datetime.now().isoformat(),
+            'last_login': None,
+            'mood_streak': 0,
+            'total_entries': 0,
+            'achievements': [],
+            'email_verified': True,  # In production, implement email verification
+            'account_status': 'active'
+        }
+        
+        # Initialize user's journal entries
+        JOURNAL_ENTRIES[user_id] = []
+        USER_DATA[user_id] = {}
+        
+        # Auto-login after signup
+        session['user_id'] = user_id
+        session['username'] = username
+        
+        return redirect(url_for('profile_setup'))
+    
+    return render_template('auth/signup.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """User login page."""
+    if request.method == 'POST':
+        username_or_email = request.form.get('username_or_email', '').strip()
+        password = request.form.get('password', '')
+        remember_me = request.form.get('remember_me') == 'on'
+        
+        # Check rate limiting based on IP or username
+        client_identifier = request.environ.get('REMOTE_ADDR', 'unknown') + '_' + username_or_email.lower()
+        
+        if not check_rate_limit(client_identifier):
+            error = "Too many failed login attempts. Please try again in 15 minutes."
+            return render_template('auth/login.html', error=error, 
+                                 username_or_email=username_or_email)
+        
+        # Find user by username or email
+        user = None
+        for user_data in USERS_DB.values():
+            if (user_data['username'].lower() == username_or_email.lower() or 
+                user_data['email'].lower() == username_or_email.lower()):
+                user = user_data
+                break
+        
+        if user and verify_password(user['password'], password):
+            # Successful login - clear any failed attempts
+            clear_failed_logins(client_identifier)
+            
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            
+            # Set session permanent if remember me is checked
+            if remember_me:
+                session.permanent = True
+                app.permanent_session_lifetime = timedelta(days=30)
+            else:
+                session.permanent = False
+            
+            # Update last login
+            user['last_login'] = datetime.datetime.now().isoformat()
+            
+            # Redirect to intended page or home
+            next_page = request.args.get('next')
+            return redirect(next_page if next_page else url_for('index'))
+        else:
+            # Record failed login attempt
+            record_failed_login(client_identifier)
+            
+            error = "Invalid username/email or password"
+            return render_template('auth/login.html', error=error, 
+                                 username_or_email=username_or_email)
+    
+    return render_template('auth/login.html')
+
+@app.route('/logout')
+def logout():
+    """User logout."""
+    session.clear()
+    return redirect(url_for('index'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    """User profile page."""
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    
+    # Get user's recent journal entries
+    user_entries = []
+    if user['id'] in JOURNAL_ENTRIES:
+        user_entries = JOURNAL_ENTRIES[user['id']][-10:]  # Last 10 entries
+    
+    # Calculate user statistics
+    total_entries = len(JOURNAL_ENTRIES.get(user['id'], []))
+    user_data = USER_DATA.get(user['id'], {})
+    mood_counts = {}
+    
+    # Count mood frequencies
+    for entry in JOURNAL_ENTRIES.get(user['id'], []):
+        mood = entry.get('mood_key', 'unknown')
+        mood_counts[mood] = mood_counts.get(mood, 0) + 1
+    
+    return render_template('auth/profile.html', 
+                         user=user,
+                         recent_entries=user_entries,
+                         total_entries=total_entries,
+                         mood_counts=mood_counts)
+
+@app.route('/profile/setup')
+@login_required
+def profile_setup():
+    """Profile setup page for new users."""
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    
+    return render_template('auth/profile_setup.html', user=user)
+
+@app.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    """Edit user profile."""
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        success_message = None
+        error_message = None
+        
+        # Handle bio update
+        bio = request.form.get('bio', '').strip()
+        if len(bio) <= 500:  # Validate bio length
+            user['bio'] = bio
+            success_message = "Profile updated successfully!"
+        else:
+            error_message = "Bio must be 500 characters or less."
+        
+        # Handle profile picture upload
+        if 'profile_picture' in request.files:
+            file = request.files['profile_picture']
+            if file and file.filename and allowed_file(file.filename):
+                # Generate secure filename
+                timestamp = str(int(time.time()))
+                file_extension = file.filename.rsplit('.', 1)[1].lower()
+                filename = f"profile_{user['id']}_{timestamp}.{file_extension}"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                
+                try:
+                    # Save file
+                    file.save(filepath)
+                    
+                    # Resize image
+                    if resize_image(filepath):
+                        # Remove old profile picture if exists
+                        if user.get('profile_picture'):
+                            old_path = os.path.join(app.config['UPLOAD_FOLDER'], user['profile_picture'])
+                            if os.path.exists(old_path):
+                                os.remove(old_path)
+                        
+                        # Update user profile
+                        user['profile_picture'] = filename
+                        success_message = "Profile picture updated successfully!"
+                    else:
+                        # If resize failed, remove the file
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                        error_message = "Failed to process image. Please try a different image."
+                        
+                except Exception as e:
+                    error_message = f"Error uploading image: {str(e)}"
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
+            elif file and file.filename:
+                error_message = "Invalid file type. Please use JPG, PNG, GIF, or WebP images."
+        
+        # Redirect with message
+        if success_message:
+            return render_template('auth/edit_profile.html', user=user, success=success_message)
+        elif error_message:
+            return render_template('auth/edit_profile.html', user=user, error=error_message)
+        
+        return redirect(url_for('profile'))
+    
+    return render_template('auth/edit_profile.html', user=user)
+
+@app.route('/profile/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Change user password."""
+    user = get_current_user()
+    if not user:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        current_password = request.form.get('current_password', '')
+        new_password = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+        
+        errors = []
+        
+        # Verify current password
+        if not verify_password(user['password'], current_password):
+            errors.append("Current password is incorrect")
+        
+        # Validate new password
+        if len(new_password) < 6:
+            errors.append("New password must be at least 6 characters long")
+        
+        if new_password != confirm_password:
+            errors.append("New passwords do not match")
+        
+        # Check password strength
+        has_letter = any(c.isalpha() for c in new_password)
+        has_number = any(c.isdigit() for c in new_password)
+        
+        if not has_letter:
+            errors.append("Password must contain at least one letter")
+        
+        if not has_number:
+            errors.append("Password must contain at least one number")
+        
+        if errors:
+            return render_template('auth/change_password.html', errors=errors)
+        
+        # Update password
+        user['password'] = hash_password(new_password)
+        
+        return render_template('auth/change_password.html', 
+                             success="Password updated successfully!")
+    
+    return render_template('auth/change_password.html')
+
+# Add this helper function after your existing helper functions
+
+def calculate_mood_analytics(mood_data):
+    """Calculate comprehensive mood analytics."""
+    if not mood_data:
+        return {
+            'total_entries': 0,
+            'current_streak': 0,
+            'longest_streak': 0,
+            'most_common_mood': None,
+            'mood_distribution': {},
+            'weekly_average': 0
+        }
+    
+    # Count mood occurrences
+    mood_counts = Counter([entry['mood_key'] for entry in mood_data])
+    most_common = mood_counts.most_common(1)
+    most_common_mood = most_common[0][0] if most_common else None
+    
+    # Calculate streaks (consecutive days with entries)
+    dates = sorted(set([entry['date'] for entry in mood_data]))
+    current_streak = 0
+    longest_streak = 0
+    temp_streak = 1
+    
+    for i in range(1, len(dates)):
+        prev_date = datetime.datetime.strptime(dates[i-1], '%Y-%m-%d').date()
+        curr_date = datetime.datetime.strptime(dates[i], '%Y-%m-%d').date()
+        
+        if (curr_date - prev_date).days == 1:
+            temp_streak += 1
+        else:
+            longest_streak = max(longest_streak, temp_streak)
+            temp_streak = 1
+    
+    longest_streak = max(longest_streak, temp_streak)
+    
+    # Calculate current streak
+    if dates:
+        last_date = datetime.datetime.strptime(dates[-1], '%Y-%m-%d').date()
+        today = datetime.date.today()
+        if (today - last_date).days <= 1:
+            current_streak = temp_streak
+    
+    # Mood distribution as percentages
+    total_entries = len(mood_data)
+    mood_distribution = {
+        mood: (count / total_entries) * 100 
+        for mood, count in mood_counts.items()
+    }
+    
+    return {
+        'total_entries': total_entries,
+        'current_streak': current_streak,
+        'longest_streak': longest_streak,
+        'most_common_mood': most_common_mood,
+        'mood_distribution': mood_distribution,
+        'weekly_average': total_entries / max(len(set([entry['date'][:7] for entry in mood_data])), 1)
+    }
+
+# Export the app for Vercel
+application = app
+
+@app.context_processor
+def inject_user():
+    """Make get_current_user available in all templates."""
+    return dict(get_current_user=get_current_user)
+
 if __name__ == '__main__':
+    # For local development
     app.run(debug=True, host='127.0.0.1', port=5000)
+else:
+    # For production (Vercel)
+    app.run(debug=False)

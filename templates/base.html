@@ -134,77 +134,127 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="fas fa-heart"></i> Moodly
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('index') }}">
-                            <i class="fas fa-home"></i> Home
-                        </a>
-                    </li>
+    <!-- Update the navbar section to include auth links -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm">
+    <div class="container">
+        <a class="navbar-brand" href="{{ url_for('index') }}">
+            <span class="brand-text">Moodly</span>
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('index') }}">
+                        <i class="fas fa-home"></i> Home
+                    </a>
+                </li>
+                
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="journalDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-edit"></i> Journal
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('journal_templates') }}">
+                            <i class="fas fa-clipboard-list"></i> Templates
+                        </a></li>
+                    </ul>
+                </li>
+                
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="trackDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-chart-line"></i> Track Progress
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('mood_tracker') }}">
+                            <i class="fas fa-chart-bar"></i> Mood Tracker
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('analytics') }}">
+                            <i class="fas fa-analytics"></i> Analytics
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('achievements_page') }}">
+                            <i class="fas fa-trophy"></i> Achievements
+                        </a></li>
+                    </ul>
+                </li>
+                
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="wellnessDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-heart"></i> Wellness
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{{ url_for('wellness_hub') }}">
+                            <i class="fas fa-spa"></i> Wellness Hub
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('breathing_exercise', mood_key='calm') }}">
+                            <i class="fas fa-lungs"></i> Breathing Exercises
+                        </a></li>
+                        <li><a class="dropdown-item" href="{{ url_for('coping_strategies_page', mood_key='calm') }}">
+                            <i class="fas fa-lightbulb"></i> Coping Strategies
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+            
+            <!-- User Authentication Section -->
+            <ul class="navbar-nav">
+                {% if session.user_id %}
+                    {% set user = get_current_user() %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="wellnessDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-heart"></i> Wellness
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                            {% if user and user.profile_picture %}
+                                <img src="{{ url_for('static', filename='uploads/profiles/' + user.profile_picture) }}" 
+                                     alt="Profile" class="rounded-circle me-2" width="32" height="32">
+                            {% else %}
+                                <i class="fas fa-user-circle fa-lg me-2"></i>
+                            {% endif %}
+                            {{ session.username or 'User' }}
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('wellness_hub') }}">
-                                <i class="fas fa-heart"></i> Wellness Hub
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{{ url_for('profile') }}">
+                                <i class="fas fa-user"></i> My Profile
                             </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('journal_templates') }}">
-                                <i class="fas fa-file-alt"></i> Journal Templates
+                            <li><a class="dropdown-item" href="{{ url_for('edit_profile') }}">
+                                <i class="fas fa-edit"></i> Edit Profile
                             </a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('breathing_exercise', mood_key='calm') }}">
-                                <i class="fas fa-lungs"></i> Breathing Exercises
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('coping_strategies_page', mood_key='anxious') }}">
-                                <i class="fas fa-lightbulb"></i> Coping Strategies
+                            <li><a class="dropdown-item" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> Logout
                             </a></li>
                         </ul>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="progressDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-line"></i> Progress
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt"></i> Login
                         </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('mood_tracker') }}">
-                                <i class="fas fa-timeline"></i> Mood Timeline
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('analytics_page') }}">
-                                <i class="fas fa-chart-bar"></i> Analytics
-                            </a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('achievements_page') }}">
-                                <i class="fas fa-trophy"></i> Achievements
-                            </a></li>
-                        </ul>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('about') }}">
-                            <i class="fas fa-info-circle"></i> About
+                        <a class="nav-link btn btn-primary text-white ms-2 px-3" href="{{ url_for('signup') }}">
+                            <i class="fas fa-user-plus"></i> Sign Up
                         </a>
                     </li>
-                </ul>
-            </div>
+                {% endif %}
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <div style="padding-top: 100px;">
         {% block content %}{% endblock %}
     </div>
 
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 Moodly - Supporting emotional wellness for tweens 💜</p>
-            <p><small>Remember: It's okay to feel all your feelings. You're doing great! 🌟</small></p>
-        </div>
-    </footer>
+    <!-- Update the footer or main description -->
+
+<footer class="footer">
+    <div class="container">
+        <p>&copy; 2025 Moodly - Supporting emotional wellness for young adults 💜</p>
+        <p><small>Remember: It's okay to feel all your feelings. You're doing great! 🌟</small></p>
+    </div>
+</footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
