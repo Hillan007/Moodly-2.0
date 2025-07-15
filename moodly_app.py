@@ -21,10 +21,18 @@ import io
 # Load environment variables from .env file
 load_dotenv()
 
+# Detect if running in production/serverless environment
+IS_PRODUCTION = (
+    os.environ.get('VERCEL') or 
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') or 
+    os.environ.get('FLASK_ENV') == 'production' or
+    not os.access('.', os.W_OK)  # Check if current directory is writable
+)
+
 app = Flask(__name__)
 
 # Configure secret key for sessions
-if os.environ.get('VERCEL'):
+if IS_PRODUCTION:
     # In production, use a consistent secret key
     app.secret_key = os.environ.get('SECRET_KEY', 'moodly-prod-secret-key-2025')
 else:
@@ -57,15 +65,22 @@ LOGIN_ATTEMPTS = {}  # Track failed login attempts for rate limiting
 UPLOAD_FOLDER = 'static/uploads/profiles'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# Create upload directory if it doesn't exist (only in local development)
-if not os.environ.get('VERCEL') and not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+# Create upload directory only in local development
+if not IS_PRODUCTION:
+    try:
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+        print("✅ Upload directory created for local development")
+    except Exception as e:
+        print(f"⚠️ Could not create upload directory: {e}")
+else:
+    print("ℹ️ Running in production mode - file uploads disabled")
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Disable file uploads in production (Vercel)
-ENABLE_FILE_UPLOADS = not os.environ.get('VERCEL', False)
+ENABLE_FILE_UPLOADS = not IS_PRODUCTION
 
 def allowed_file(filename):
     """Check if uploaded file has allowed extension."""
@@ -76,8 +91,8 @@ def allowed_file(filename):
 def resize_image(image_path, max_size=(400, 400)):
     """Resize uploaded image to max dimensions while maintaining aspect ratio."""
     try:
-        # Check if we're in production (Vercel) - file uploads disabled
-        if os.environ.get('VERCEL') or not ENABLE_FILE_UPLOADS:
+        # Check if we're in production - file uploads disabled
+        if IS_PRODUCTION:
             print("⚠️ File uploads not supported in production environment")
             return False
             
@@ -1407,9 +1422,10 @@ def health_check():
     """Health check endpoint for monitoring."""
     return {
         'status': 'healthy',
-        'environment': 'production' if os.environ.get('VERCEL') else 'development',
+        'environment': 'production' if IS_PRODUCTION else 'development',
         'file_uploads_enabled': ENABLE_FILE_UPLOADS,
-        'openai_available': openai_client is not None
+        'openai_available': openai_client is not None,
+        'upload_folder_writable': os.access('.', os.W_OK) if not IS_PRODUCTION else False
     }
 
 # Export the app for Vercel
