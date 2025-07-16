@@ -1,5 +1,20 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
+# CRITICAL: Add this at the very top, before ANY other code
 import os
+import sys
+
+# IMMEDIATE SERVERLESS CHECK - BEFORE ANY OTHER OPERATIONS
+if '/var/task' in os.getcwd() or '/var/task' in str(__file__) or os.environ.get('VERCEL'):
+    print("🚨 SERVERLESS DETECTED - Blocking all file operations")
+    # Override makedirs immediately
+    def _blocked_makedirs(*args, **kwargs):
+        print(f"🚫 BLOCKED: makedirs{args} in serverless environment")
+        return
+    os.makedirs = _blocked_makedirs
+    
+    # Set environment flag
+    os.environ['FORCE_SUPABASE_ONLY'] = 'true'
+
 import json
 import datetime
 from datetime import date, timedelta
@@ -1644,6 +1659,8 @@ def storage_status():
         'storage_type': 'supabase' if supabase_storage.is_enabled() else 'local',
         'supabase_stats': supabase_storage.get_storage_stats() if supabase_storage.is_enabled() else None
     })
+
+
 
 @app.route('/api/upload/test', methods=['POST'])
 @login_required
