@@ -1,19 +1,54 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for
-# CRITICAL: Add this at the very top, before ANY other code
+# NUCLEAR PROTECTION - MUST BE FIRST LINE
 import os
 import sys
 
-# IMMEDIATE SERVERLESS CHECK - BEFORE ANY OTHER OPERATIONS
-if '/var/task' in os.getcwd() or '/var/task' in str(__file__) or os.environ.get('VERCEL'):
-    print("🚨 SERVERLESS DETECTED - Blocking all file operations")
-    # Override makedirs immediately
-    def _blocked_makedirs(*args, **kwargs):
-        print(f"🚫 BLOCKED: makedirs{args} in serverless environment")
-        return
-    os.makedirs = _blocked_makedirs
+# IMMEDIATE NUCLEAR OVERRIDE BEFORE ANY OTHER CODE
+if True:  # Always apply nuclear protection
+    print("🚨 NUCLEAR FILE SYSTEM PROTECTION ACTIVE")
     
-    # Set environment flag
-    os.environ['FORCE_SUPABASE_ONLY'] = 'true'
+    # Store original functions
+    _original_makedirs = getattr(os, 'makedirs', None)
+    _original_mkdir = getattr(os, 'mkdir', None)
+    
+    # Nuclear overrides
+    def _nuclear_makedirs(*args, **kwargs):
+        print(f"🚫 NUCLEAR: Blocked makedirs{args}")
+        return None
+    
+    def _nuclear_mkdir(*args, **kwargs):
+        print(f"🚫 NUCLEAR: Blocked mkdir{args}")
+        return None
+    
+    # Apply immediately
+    os.makedirs = _nuclear_makedirs
+    os.mkdir = _nuclear_mkdir
+    
+    print("🛡️ Nuclear file system protection applied")
+
+# Force environment settings
+os.environ['FORCE_SUPABASE_ONLY'] = 'true'
+os.environ['DISABLE_LOCAL_STORAGE'] = 'true'
+os.environ['NUCLEAR_MODE'] = 'true'
+
+print("🌩️ NUCLEAR MODE: Supabase-only storage active")
+
+# Now proceed with imports
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+# CRITICAL: Add this at the very top, before ANY other code
+# import os
+# import sys
+
+# IMMEDIATE SERVERLESS CHECK - BEFORE ANY OTHER OPERATIONS
+# if '/var/task' in os.getcwd() or '/var/task' in str(__file__) or os.environ.get('VERCEL'):
+#     print("🚨 SERVERLESS DETECTED - Blocking all file operations")
+#     # Override makedirs immediately
+#     def _blocked_makedirs(*args, **kwargs):
+#         print(f"🚫 BLOCKED: makedirs{args} in serverless environment")
+#         return
+#     os.makedirs = _blocked_makedirs
+    
+#     # Set environment flag
+#     os.environ['FORCE_SUPABASE_ONLY'] = 'true'
 
 import json
 import datetime
@@ -131,6 +166,36 @@ print(f"📂 FINAL upload folder: {UPLOAD_FOLDER}")
 # Load environment variables from .env file
 load_dotenv()
 
+# CLOUD-ONLY STORAGE CONFIGURATION
+print("🌩️ INITIALIZING CLOUD-ONLY STORAGE...")
+
+# Force Supabase initialization
+if not supabase_storage.is_enabled():
+    print("⚠️ WARNING: Supabase not configured!")
+    print("📋 Please add SUPABASE_URL and SUPABASE_KEY to environment")
+    # Still proceed without crashing
+    UPLOAD_FOLDER = None
+    ENABLE_FILE_UPLOADS = False
+else:
+    print("✅ Supabase cloud storage active")
+    UPLOAD_FOLDER = None  # No local storage needed
+    ENABLE_FILE_UPLOADS = True
+
+# COMPLETELY ELIMINATE any directory creation logic
+# Remove all references to static/uploads, /tmp, etc.
+
+# Simple production detection without file system tests
+IS_PRODUCTION = (
+    os.environ.get('VERCEL') is not None or
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None or
+    os.environ.get('NOW_REGION') is not None or
+    '/var/task' in os.getcwd()
+)
+
+print(f"🔍 Environment: {'Production' if IS_PRODUCTION else 'Development'}")
+print(f"📦 Storage: {'Supabase Cloud' if supabase_storage.is_enabled() else 'DISABLED'}")
+print(f"📁 Upload folder: {UPLOAD_FOLDER}")
+
 # Simplify production detection using the serverless detection we already have
 IS_PRODUCTION = IS_SERVERLESS or bool(
     os.environ.get('FLASK_ENV') == 'production' or
@@ -205,14 +270,8 @@ def allowed_file(filename):
 
 def upload_profile_picture(file, user_id):
     """
-    Upload profile picture using Supabase or local storage
-    
-    Args:
-        file: Uploaded file object
-        user_id: User ID for organizing files
-        
-    Returns:
-        dict: Success status and file URL or error message
+    Upload profile picture - CLOUD ONLY VERSION
+    Completely eliminates local file system operations
     """
     if not file or not allowed_file(file.filename):
         return {
@@ -220,82 +279,48 @@ def upload_profile_picture(file, user_id):
             'error': 'Invalid file type. Please upload a PNG, JPG, JPEG, GIF, or WEBP image.'
         }
     
+    # CLOUD ONLY - No fallback to local storage
+    if not supabase_storage.is_enabled():
+        return {
+            'success': False,
+            'error': 'Cloud storage not configured. Please contact administrator.'
+        }
+    
     try:
+        print(f"📤 Uploading to Supabase cloud storage...")
+        
         # Get file extension
         file_extension = file.filename.rsplit('.', 1)[1].lower()
         
-        # Use Supabase if available
-        if supabase_storage.is_enabled():
-            print(f"📤 Uploading to Supabase cloud storage...")
-            
-            # Read file data
-            file.seek(0)  # Reset file pointer
-            file_data = file.read()
-            
-            # Upload to Supabase
-            result = supabase_storage.upload_profile_picture(
-                file_data=file_data,
-                user_id=user_id,
-                file_extension=file_extension
-            )
-            
-            if result['success']:
-                return {
-                    'success': True,
-                    'file_url': result['public_url'],
-                    'storage_type': 'supabase',
-                    'filename': result['filename']
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': f"Cloud upload failed: {result['error']}"
-                }
+        # Read file data
+        file.seek(0)
+        file_data = file.read()
         
+        # Upload to Supabase (our only option)
+        result = supabase_storage.upload_profile_picture(
+            file_data=file_data,
+            user_id=user_id,
+            file_extension=file_extension
+        )
+        
+        if result['success']:
+            return {
+                'success': True,
+                'file_url': result['public_url'],
+                'storage_type': 'supabase',
+                'filename': result['filename']
+            }
         else:
-            # Fallback to local/temp storage
-            print(f"📁 Using local storage fallback...")
-            
-            if not UPLOAD_FOLDER:
-                return {
-                    'success': False,
-                    'error': 'No storage configured'
-                }
-            
-            # Generate secure filename
-            filename = secure_filename(f"{user_id}_profile_{int(time.time())}.{file_extension}")
-            file_path = os.path.join(UPLOAD_FOLDER, filename)
-            
-            # Save file
-            file.save(file_path)
-            
-            # Resize image
-            if resize_image(file_path):
-                # Return relative URL for local storage
-                if IS_SERVERLESS:
-                    # In serverless, files are temporary
-                    file_url = f"/tmp/uploads/profiles/{filename}"
-                else:
-                    # In local development
-                    file_url = f"/static/uploads/profiles/{filename}"
-                
-                return {
-                    'success': True,
-                    'file_url': file_url,
-                    'storage_type': 'local',
-                    'filename': filename
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': 'Failed to process image'
-                }
+            return {
+                'success': False,
+                'error': f"Cloud upload failed: {result['error']}"
+            }
                 
     except Exception as e:
         print(f"❌ Error uploading profile picture: {e}")
         return {
             'success': False,
-            'error': str(e)
+            'error': f"Upload error: {str(e)}"
         }
 
 def generate_user_id():
@@ -890,36 +915,6 @@ def mood_tracker():
 
 @app.route('/about')
 def about():
-    return render_template('about.html')
-
-@app.route('/api/music/<mood_key>')
-def get_music_for_mood(mood_key):
-    """API endpoint to get music recommendations for a specific mood"""
-    if mood_key not in MOODS:
-        return jsonify({'error': 'Invalid mood'}), 400
-    
-    songs = get_mood_songs(mood_key, limit=10)
-    return jsonify({
-        'mood': mood_key,
-        'songs': songs,
-        'mood_info': MOODS[mood_key]
-    })
-
-def calculate_mood_streak(user_id):
-    """Calculate current journaling streak for user"""
-    if user_id not in JOURNAL_ENTRIES:
-        return 0
-    
-    entries = JOURNAL_ENTRIES[user_id]
-    if not entries:
-        return 0
-    
-    # Sort entries by date
-    sorted_entries = sorted(entries, key=lambda x: x['date'], reverse=True)
-    
-    streak = 0
-    current_date = date.today()
-    
     for entry in sorted_entries:
         entry_date = datetime.datetime.strptime(entry['date'], '%Y-%m-%d').date()
         if entry_date == current_date or entry_date == current_date - timedelta(days=streak):
