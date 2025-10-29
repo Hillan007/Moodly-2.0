@@ -12,7 +12,7 @@ Moodly is an emotional journaling web application designed for tweens and young 
 - **Framework**: Flask 2.3.3 (Python web framework)
 - **Database/Storage**: Supabase (PostgreSQL + Storage)
 - **Authentication**: Flask sessions with Werkzeug password hashing (PBKDF2)
-- **Environment**: Python 3.8+ with python-dotenv for configuration
+- **Environment**: Python 3.8+ (minimum), Python 3.9 (production/Vercel) with python-dotenv for configuration
 - **Image Processing**: Pillow (PIL) for profile pictures
 
 ### Frontend
@@ -112,13 +112,21 @@ Moodly is an emotional journaling web application designed for tweens and young 
 The application is designed to run both locally and on serverless platforms (Vercel):
 
 ```python
-# Environment detection pattern
+# Ultra-robust serverless environment detection
 IS_SERVERLESS = (
     '/var/task' in os.getcwd() or 
-    os.environ.get('VERCEL') is not None or 
-    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None
+    '/var/task' in __file__ or  # Check if the file itself is in /var/task
+    os.environ.get('VERCEL') is not None or  # Any VERCEL env var
+    os.environ.get('AWS_LAMBDA_FUNCTION_NAME') is not None or 
+    os.environ.get('NOW_REGION') is not None or 
+    'LAMBDA_RUNTIME_DIR' in os.environ or
+    os.path.exists('/var/task') or  # Check if /var/task exists
+    'vercel' in os.getcwd().lower() or  # Sometimes vercel uses different paths
+    'lambda' in os.getcwd().lower()  # AWS Lambda detection
 )
 ```
+
+**Note**: See `moodly_app.py` lines 81-115 for the complete serverless detection implementation with failsafe mechanisms.
 
 **Critical Rules:**
 1. **Never use local file system** for persistent storage in production
@@ -328,7 +336,8 @@ def api_new_endpoint():
 ## Important Files to Preserve
 
 **Do NOT modify without understanding**:
-- `moodly_app.py` lines 1-100 (nuclear protection system for serverless)
+- `moodly_app.py` lines 1-27 (nuclear protection system that prevents file operations in serverless)
+- `moodly_app.py` lines 81-155 (comprehensive serverless detection and storage configuration)
 - `vercel.json` (deployment configuration)
 - `/api/index.py` (Vercel entry point)
 - `.env.example` (environment template)
