@@ -5,6 +5,21 @@
 {% block content %}
 <div class="container">
     <div class="container-main">
+        <!-- Quote of the Day -->
+        {% if daily_quote %}
+        <div class="alert alert-light border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%); border-radius: 15px;">
+            <div class="text-center">
+                <i class="fas fa-quote-left fa-2x mb-3" style="color: #ff6b6b; opacity: 0.6;"></i>
+                <p class="lead mb-2" style="font-style: italic; font-size: 1.1rem; color: #2c3e50;">
+                    "{{ daily_quote.quote }}"
+                </p>
+                <p class="text-muted mb-0">
+                    <small>— {{ daily_quote.author }}</small>
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        
         <div class="text-center mb-5">
             <h1 class="display-4 mb-3">
                 <i class="fas fa-rainbow"></i> How are you feeling today?

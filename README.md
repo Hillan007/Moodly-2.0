@@ -29,13 +29,23 @@ Try Moodly now without any setup - it's live and ready to use!
 - **🧘‍♀️ Breathing Exercises**: Guided breathing exercises for anxiety, anger, sadness, and excitement
 - **🏆 Achievement System**: 8 unlockable achievements to encourage consistent journaling
 - **📊 Enhanced Analytics**: Mood streaks, pattern analysis, and personalized insights
-- **📝 Journal Templates**: 4 structured templates (Gratitude, Daily Reflection, Worry Release, Dreams & Goals)
+- **📝 Journal Templates**: 8 structured templates including new anxiety management, relationship reflection, success celebration, and mindfulness templates
 - **💡 Coping Strategies**: Evidence-based strategies for managing difficult emotions
 - **🌟 Wellness Hub**: Centralized access to all wellness tools and resources
 - **📈 Mood Predictions**: Simple pattern analysis to help understand emotional trends
 - **🎯 Gamification**: Streaks, badges, and progress tracking to maintain engagement
 - **🆘 Crisis Resources**: Access to mental health resources and emergency contacts
 - **🎨 Enhanced UI**: Improved navigation with dropdowns and better mobile experience
+
+### 🎉 NEW in Version 2.0
+- **🌙 Dark Mode**: Eye-friendly dark theme toggle with persistent preference
+- **💬 Quote of the Day**: Daily inspirational quotes to motivate and inspire
+- **🔍 Enhanced Search**: Search and filter journal entries by keywords and mood
+- **📝 4 New Journal Templates**: 
+  - 🌈 Anxiety Management - Work through anxious feelings with structure
+  - 💝 Relationship Reflection - Process feelings about friendships and relationships
+  - 🎉 Success & Celebration - Acknowledge achievements and growth
+  - 🧘 Mindfulness Moment - Ground yourself in the present moment
 
 ### 🔒 Security Features
 - **Password Strength Validation**: Real-time feedback with strength meter
@@ -231,6 +241,15 @@ Moodly supports several UN Sustainable Development Goals:
 
 ## 🔄 Recent Updates & Enhancements
 
+### 🎉 Version 2.0 - Enhanced User Experience (October 2024)
+- ✅ **Dark Mode**: Eye-friendly theme toggle with persistent preferences
+- ✅ **Daily Inspirational Quotes**: 30 curated quotes rotating daily
+- ✅ **Enhanced Search & Filtering**: Search entries by keywords and filter by mood
+- ✅ **4 New Journal Templates**: Anxiety management, relationship reflection, success celebration, mindfulness
+- ✅ **Improved Template System**: All 8 templates now include emojis and descriptions
+- ✅ **Better User Experience**: Smooth theme transitions and improved accessibility
+- ✅ **Comprehensive Feature Documentation**: Full VERSION_2.0_FEATURES.md with 15 recommended features
+
 ### 🆕 Version 2.1 - Authentication & Security
 - ✅ **Complete User Authentication System**
 - ✅ **Profile Management with Pictures**
@@ -244,7 +263,7 @@ All the recommended features have been successfully implemented:
 ### ✅ **Immediate Enhancements (High Impact)**
 - **Enhanced Mood Tracking & Analytics**: Mood streaks, weekly/monthly summaries, pattern recognition
 - **Improved Music Experience**: Enhanced playlists with mood matching scores
-- **Enhanced Journaling Features**: 4 structured templates (gratitude, daily reflection, worry dump, dream big)
+- **Enhanced Journaling Features**: 8 structured templates with diverse emotional needs coverage
 - **Achievement System**: 8 progressive achievements with beautiful UI
 
 ### ✅ **Previous Enhancements**

@@ -406,7 +406,49 @@ MOODS = {
     'grateful': {'emoji': '🙏', 'color': '#DEB887', 'name': 'Grateful'}
 }
 
-# Spotify Configuration
+# Daily Inspirational Quotes
+DAILY_QUOTES = [
+    {"quote": "You are braver than you believe, stronger than you seem, and smarter than you think.", "author": "A.A. Milne"},
+    {"quote": "The only way to do great work is to love what you do.", "author": "Steve Jobs"},
+    {"quote": "Believe you can and you're halfway there.", "author": "Theodore Roosevelt"},
+    {"quote": "It does not matter how slowly you go as long as you do not stop.", "author": "Confucius"},
+    {"quote": "Your feelings are valid. You matter. You are enough.", "author": "Anonymous"},
+    {"quote": "Progress, not perfection.", "author": "Anonymous"},
+    {"quote": "Every day may not be good, but there is something good in every day.", "author": "Alice Morse Earle"},
+    {"quote": "You don't have to be positive all the time. It's perfectly okay to feel sad, angry, annoyed, frustrated, scared, or anxious. Having feelings doesn't make you a negative person. It makes you human.", "author": "Lori Deschene"},
+    {"quote": "Be kind to yourself. You're doing the best you can.", "author": "Anonymous"},
+    {"quote": "You are allowed to be both a masterpiece and a work in progress simultaneously.", "author": "Sophia Bush"},
+    {"quote": "Your mental health is a priority. Your happiness is essential. Your self-care is a necessity.", "author": "Anonymous"},
+    {"quote": "Growth is painful. Change is painful. But nothing is as painful as staying stuck somewhere you don't belong.", "author": "Mandy Hale"},
+    {"quote": "It's okay to not be okay. It's okay to ask for help.", "author": "Anonymous"},
+    {"quote": "You are not your thoughts. You are the observer of your thoughts.", "author": "Amit Ray"},
+    {"quote": "Healing is not linear. Some days will be harder than others, and that's okay.", "author": "Anonymous"},
+    {"quote": "Your pace doesn't matter. Forward is forward.", "author": "Anonymous"},
+    {"quote": "Be patient with yourself. Nothing in nature blooms all year.", "author": "Anonymous"},
+    {"quote": "You don't have to control your thoughts. You just have to stop letting them control you.", "author": "Dan Millman"},
+    {"quote": "Talk to yourself like someone you love.", "author": "Brené Brown"},
+    {"quote": "Courage doesn't always roar. Sometimes courage is the quiet voice at the end of the day saying 'I will try again tomorrow.'", "author": "Mary Anne Radmacher"},
+    {"quote": "You are worthy of the love you keep trying to give everyone else.", "author": "Anonymous"},
+    {"quote": "Small steps in the right direction can turn out to be the biggest steps of your life.", "author": "Anonymous"},
+    {"quote": "You have survived 100% of your worst days. You're doing great.", "author": "Anonymous"},
+    {"quote": "Feelings are just visitors. Let them come and go.", "author": "Mooji"},
+    {"quote": "Be gentle with yourself, you're doing the best you can.", "author": "Anonymous"},
+    {"quote": "Your current situation is not your final destination.", "author": "Anonymous"},
+    {"quote": "It's okay to restart, regroup, and refocus as many times as you need to.", "author": "Anonymous"},
+    {"quote": "You're allowed to take up space.", "author": "Anonymous"},
+    {"quote": "Self-care is how you take your power back.", "author": "Lalah Delia"},
+    {"quote": "You are enough just as you are.", "author": "Meghan Markle"}
+]
+
+def get_daily_quote():
+    """Get a quote of the day based on current date."""
+    import datetime
+    # Use day of year to ensure same quote all day, but changes daily
+    day_of_year = datetime.datetime.now().timetuple().tm_yday
+    quote_index = day_of_year % len(DAILY_QUOTES)
+    return DAILY_QUOTES[quote_index]
+
+
 SPOTIFY_CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 SPOTIFY_CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 
@@ -552,7 +594,9 @@ JOURNAL_TEMPLATES = {
             'Someone who made me smile:',
             'A simple pleasure I enjoyed:',
             'Something about myself I appreciate:'
-        ]
+        ],
+        'emoji': '🙏',
+        'description': 'Focus on the positive things in your life'
     },
     'daily_reflection': {
         'name': 'Daily Check-in',
@@ -561,7 +605,9 @@ JOURNAL_TEMPLATES = {
             'The best part of my day:',
             'Something that challenged me:',
             'What I\'m looking forward to:'
-        ]
+        ],
+        'emoji': '📝',
+        'description': 'Reflect on your day and emotions'
     },
     'worry_dump': {
         'name': 'Worry Release',
@@ -570,7 +616,9 @@ JOURNAL_TEMPLATES = {
             'What I can control about this:',
             'What I can\'t control:',
             'One small step I can take:'
-        ]
+        ],
+        'emoji': '🌊',
+        'description': 'Release anxious thoughts and find solutions'
     },
     'dream_big': {
         'name': 'Dreams & Goals',
@@ -579,7 +627,53 @@ JOURNAL_TEMPLATES = {
             'Why this matters to me:',
             'First step I could take:',
             'Who could help me:'
-        ]
+        ],
+        'emoji': '⭐',
+        'description': 'Explore your aspirations and create action plans'
+    },
+    'anxiety_management': {
+        'name': 'Anxiety Check',
+        'prompts': [
+            'What triggered my anxiety:',
+            'Physical sensations I\'m noticing:',
+            'Calming thoughts I can focus on:',
+            'One thing I can do right now to feel safer:'
+        ],
+        'emoji': '🌈',
+        'description': 'Work through anxious feelings with structure'
+    },
+    'relationship_reflection': {
+        'name': 'Relationship Reflection',
+        'prompts': [
+            'A relationship that\'s on my mind:',
+            'How this relationship makes me feel:',
+            'What I appreciate about this person:',
+            'What I might want to communicate:'
+        ],
+        'emoji': '💝',
+        'description': 'Process feelings about friendships and relationships'
+    },
+    'success_celebration': {
+        'name': 'Success & Celebration',
+        'prompts': [
+            'Something I accomplished recently:',
+            'What I did well:',
+            'Challenges I overcame:',
+            'How I want to celebrate this win:'
+        ],
+        'emoji': '🎉',
+        'description': 'Acknowledge your achievements and growth'
+    },
+    'mindfulness_moment': {
+        'name': 'Mindfulness Moment',
+        'prompts': [
+            'What I see around me right now:',
+            'What I hear:',
+            'What I feel (physically):',
+            'One thing that brings me peace in this moment:'
+        ],
+        'emoji': '🧘',
+        'description': 'Ground yourself in the present moment'
     }
 }
 
@@ -818,7 +912,8 @@ def get_fallback_songs(mood, limit=5):
 
 @app.route('/')
 def index():
-    return render_template('index.html', moods=MOODS)
+    daily_quote = get_daily_quote()
+    return render_template('index.html', moods=MOODS, daily_quote=daily_quote)
 
 @app.route('/mood/<mood_key>')
 def mood_selected(mood_key):
