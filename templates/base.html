@@ -13,19 +13,41 @@
             --accent-color: #fd7e14;
             --light-bg: #f8f9fa;
             --text-dark: #343a40;
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --navbar-bg: rgba(255, 255, 255, 0.95);
+            --timeline-bg: white;
+            --journal-bg: #f8f9fa;
+            --journal-focus-bg: white;
+        }
+
+        /* Dark mode theme */
+        [data-theme="dark"] {
+            --light-bg: #1a1a2e;
+            --text-dark: #eaeaea;
+            --bg-gradient-start: #0f0c29;
+            --bg-gradient-end: #302b63;
+            --card-bg: rgba(30, 30, 46, 0.95);
+            --navbar-bg: rgba(30, 30, 46, 0.95);
+            --timeline-bg: #2a2a3e;
+            --journal-bg: #1a1a2e;
+            --journal-focus-bg: #2a2a3e;
         }
 
         body {
             font-family: 'Comic Sans MS', cursive, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             color: var(--text-dark);
+            transition: background 0.3s ease, color 0.3s ease;
         }
 
         .navbar {
-            background: rgba(255, 255, 255, 0.95) !important;
+            background: var(--navbar-bg) !important;
             backdrop-filter: blur(10px);
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s ease;
         }
 
         .navbar-brand {
@@ -35,17 +57,18 @@
         }
 
         .container-main {
-            background: rgba(255, 255, 255, 0.95);
+            background: var(--card-bg);
             border-radius: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(10px);
             margin: 2rem auto;
             padding: 2rem;
             max-width: 900px;
+            transition: background 0.3s ease;
         }
 
         .mood-card {
-            background: white;
+            background: var(--timeline-bg);
             border-radius: 15px;
             padding: 1.5rem;
             margin: 0.5rem;
@@ -80,7 +103,7 @@
         }
 
         .journal-area {
-            background: #f8f9fa;
+            background: var(--journal-bg);
             border-radius: 15px;
             padding: 1.5rem;
             border: 2px dashed #dee2e6;
@@ -89,7 +112,7 @@
 
         .journal-area:focus-within {
             border-color: var(--primary-color);
-            background: white;
+            background: var(--journal-focus-bg);
         }
 
         .motivational-message {
@@ -104,12 +127,29 @@
         }
 
         .timeline-item {
-            background: white;
+            background: var(--timeline-bg);
             border-radius: 10px;
             padding: 1rem;
             margin: 0.5rem 0;
             border-left: 4px solid;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s ease;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            background: none;
+            border: 2px solid var(--primary-color);
+            border-radius: 25px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-dark);
+        }
+
+        .theme-toggle:hover {
+            background: var(--primary-color);
+            color: white;
         }
 
         .footer {
@@ -201,6 +241,12 @@
             
             <!-- User Authentication Section -->
             <ul class="navbar-nav">
+                <!-- Dark Mode Toggle -->
+                <li class="nav-item me-2">
+                    <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                </li>
                 {% if session.user_id %}
                     {% set user = get_current_user() %}
                     <li class="nav-item dropdown">
@@ -257,6 +303,38 @@
 </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Dark Mode Toggle Script -->
+    <script>
+        // Dark mode functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const htmlElement = document.documentElement;
+        
+        // Check for saved theme preference or default to light mode
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        htmlElement.setAttribute('data-theme', currentTheme);
+        updateThemeIcon(currentTheme);
+        
+        // Toggle theme
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+        
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.className = 'fas fa-sun';
+            } else {
+                themeIcon.className = 'fas fa-moon';
+            }
+        }
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

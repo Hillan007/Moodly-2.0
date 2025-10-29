@@ -9,10 +9,46 @@
             <h1 class="display-4 mb-3">
                 <i class="fas fa-chart-line"></i> My Emotional Journey
             </h1>
-            <p class="lead">Look how far you've come.Every entry shows your growth and self-awareness.</p>
+            <p class="lead">Look how far you've come. Every entry shows your growth and self-awareness.</p>
         </div>
 
         {% if mood_data %}
+            <!-- Search and Filter Section -->
+            <div class="mb-4">
+                <div class="card" style="border-radius: 15px; border: none; background: rgba(255, 255, 255, 0.7);">
+                    <div class="card-body">
+                        <div class="row align-items-end">
+                            <div class="col-md-6 mb-3">
+                                <label for="searchInput" class="form-label">
+                                    <i class="fas fa-search"></i> Search Entries
+                                </label>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="searchInput" 
+                                       placeholder="Search by keywords..."
+                                       style="border-radius: 10px;">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="moodFilter" class="form-label">
+                                    <i class="fas fa-filter"></i> Filter by Mood
+                                </label>
+                                <select class="form-select" id="moodFilter" style="border-radius: 10px;">
+                                    <option value="">All Moods</option>
+                                    {% for mood_key, mood_info in moods.items() %}
+                                    <option value="{{ mood_key }}">{{ mood_info.emoji }} {{ mood_info.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-2 mb-3">
+                                <button class="btn btn-secondary w-100" onclick="resetFilters()" style="border-radius: 10px;">
+                                    <i class="fas fa-redo"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Mood Statistics -->
             <div class="row mb-4">
                 <div class="col-md-4">
@@ -49,7 +85,10 @@
                 <h3 class="mb-4"><i class="fas fa-timeline"></i> Your Mood Timeline</h3>
                 
                 {% for entry in mood_data|reverse %}
-                <div class="timeline-item" style="border-left-color: {{ moods[entry.mood].color }};">
+                <div class="timeline-item" 
+                     style="border-left-color: {{ moods[entry.mood].color }};"
+                     data-mood="{{ entry.mood }}"
+                     data-entry="{{ entry.entry_preview|lower }}">
                     <div class="row align-items-center">
                         <div class="col-md-2 text-center">
                             <div style="font-size: 2rem;">{{ entry.mood_info.emoji }}</div>
@@ -184,11 +223,50 @@
 
 {% block extra_js %}
 <script>
-// Add some interactive elements
-document.addEventListener('DOMContentLoaded', function() {
-    // Animate timeline items on scroll
-    const timelineItems = document.querySelectorAll('.timeline-item');
+// Search and filter functionality
+const searchInput = document.getElementById('searchInput');
+const moodFilter = document.getElementById('moodFilter');
+const timelineItems = document.querySelectorAll('.timeline-item');
+
+function filterEntries() {
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const selectedMood = moodFilter ? moodFilter.value : '';
     
+    let visibleCount = 0;
+    
+    timelineItems.forEach(item => {
+        const itemMood = item.getAttribute('data-mood');
+        const itemText = item.getAttribute('data-entry') || item.textContent.toLowerCase();
+        
+        const moodMatch = !selectedMood || itemMood === selectedMood;
+        const searchMatch = !searchTerm || itemText.includes(searchTerm);
+        
+        if (moodMatch && searchMatch) {
+            item.style.display = '';
+            visibleCount++;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    console.log(`Showing ${visibleCount} of ${timelineItems.length} entries`);
+}
+
+function resetFilters() {
+    if (searchInput) searchInput.value = '';
+    if (moodFilter) moodFilter.value = '';
+    filterEntries();
+}
+
+if (searchInput) {
+    searchInput.addEventListener('input', filterEntries);
+}
+if (moodFilter) {
+    moodFilter.addEventListener('change', filterEntries);
+}
+
+// Animate timeline items on scroll
+document.addEventListener('DOMContentLoaded', function() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
